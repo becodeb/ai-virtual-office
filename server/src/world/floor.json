@@ -1,0 +1,36 @@
+{
+  "width": 24,
+  "height": 18,
+  "elevatorCell": [0, 9],
+  "fireExitCell": [23, 9],
+  "kitchen": {
+    "coffeeMachineCell": [2, 16]
+  },
+  "meetingRoom": {
+    "screenCell": [2, 1]
+  },
+  "desks": [
+    { "id": "D1", "cell": [3, 3], "seatCell": [3, 4], "facing": "north" },
+    { "id": "D2", "cell": [5, 3], "seatCell": [5, 4], "facing": "north" },
+    { "id": "D3", "cell": [7, 3], "seatCell": [7, 4], "facing": "north" },
+    { "id": "D4", "cell": [9, 3], "seatCell": [9, 4], "facing": "north" },
+    { "id": "D5", "cell": [11, 3], "seatCell": [11, 4], "facing": "north" },
+    { "id": "D6", "cell": [13, 3], "seatCell": [13, 4], "facing": "north", "window": true },
+    { "id": "D7", "cell": [3, 8], "seatCell": [3, 7], "facing": "south" },
+    { "id": "D8", "cell": [5, 8], "seatCell": [5, 7], "facing": "south" },
+    { "id": "D9", "cell": [7, 8], "seatCell": [7, 7], "facing": "south" },
+    { "id": "D10", "cell": [9, 8], "seatCell": [9, 7], "facing": "south" },
+    { "id": "D11", "cell": [11, 8], "seatCell": [11, 7], "facing": "south" },
+    { "id": "D12", "cell": [13, 8], "seatCell": [13, 7], "facing": "south", "window": true }
+  ],
+  "lounge": {
+    "seats": [
+      { "cell": [17, 2], "facing": "south" },
+      { "cell": [19, 2], "facing": "south" },
+      { "cell": [21, 2], "facing": "south" },
+      { "cell": [17, 4], "facing": "north" },
+      { "cell": [19, 4], "facing": "north" },
+      { "cell": [21, 4], "facing": "north" }
+    ]
+  }
+}

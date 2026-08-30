@@ -56,12 +56,12 @@ Estimate is driven by five greenfield workspaces (`hooks/`, `server/`, `client/`
 ## Phase 2: Server / Hub
 
 - [ ] 2.1 Scaffold `server/` (`package.json`, `src/index.ts`: HTTP `POST /events` + `GET /healthz` + WS upgrade on one port, 10 Hz tick).
-- [ ] 2.2 Implement `server/src/world/grid.ts`: `Uint8Array` occupancy (0 free, 1 static, 2 seat), built once from `server/src/world/floor.json` (default 24×18, 12 desks).
-- [ ] 2.3 Implement `server/src/world/astar.ts`: 8-connected, no corner-cutting, octile heuristic `h = (dx+dy) + (√2-2)·min(dx,dy)`, binary-heap open set, deterministic tie-break (lower `h`, then lower cell index), string-pulled path smoothing.
-- [ ] 2.4 RED tests `server/src/world/astar.test.ts`: hand-computed octile costs, no corner-cutting through a diagonal wall gap, `null` on unreachable, byte-identical determinism across repeated runs (office-simulation spec: pathfinding + unreachable scenarios).
-- [ ] 2.5 Implement `server/src/world/desks.ts`: `DeskRegistry` reading `floor.json`, allocation by lowest A* cost from elevator (ties by lowest `deskId`), FIFO free list, hot-desk handoff to longest-waiting queued agent (world-state-hub spec: desk allocation + hot-desking scenarios).
-- [ ] 2.6 Implement `server/src/world/identity.ts`: `IdentityStore` persisting `identityKey` records (coffee count, completed tasks, rank, skin) to `/data/identities.json`, debounced 5s, flushed on `SIGTERM`; live world state never persisted.
-- [ ] 2.7 RED test: identity record survives simulated restart; live position state does not (world-state-hub spec, cross-restart persistence scenarios).
+- [x] 2.2 Implement `server/src/world/grid.ts`: `Uint8Array` occupancy (0 free, 1 static, 2 seat), built once from `server/src/world/floor.json` (default 24×18, 12 desks).
+- [x] 2.3 Implement `server/src/world/astar.ts`: 8-connected, no corner-cutting, octile heuristic `h = (dx+dy) + (√2-2)·min(dx,dy)`, binary-heap open set, deterministic tie-break (lower `h`, then lower cell index), string-pulled path smoothing.
+- [x] 2.4 RED tests `server/src/world/astar.test.ts`: hand-computed octile costs, no corner-cutting through a diagonal wall gap, `null` on unreachable, byte-identical determinism across repeated runs (office-simulation spec: pathfinding + unreachable scenarios).
+- [x] 2.5 Implement `server/src/world/desks.ts`: `DeskRegistry` reading `floor.json`, allocation by lowest A* cost from elevator (ties by lowest `deskId`), FIFO free list, hot-desk handoff to longest-waiting queued agent (world-state-hub spec: desk allocation + hot-desking scenarios).
+- [x] 2.6 Implement `server/src/world/identity.ts`: `IdentityStore` persisting `identityKey` records (coffee count, completed tasks, rank, skin) to `/data/identities.json`, debounced 5s, flushed on `SIGTERM`; live world state never persisted.
+- [x] 2.7 RED test: identity record survives simulated restart; live position state does not (world-state-hub spec, cross-restart persistence scenarios).
 - [ ] 2.8 Implement `packages/shared/src/classify.ts`: pure `classify(ev)`/`pickSkin(role, identityKey, machineId)`, 14-rule ordered table (role-classification spec cast table + design §7), `Confidence: 'exact'|'inferred'` on rules 2/3, `forcePush` flag on rule 1.
 - [ ] 2.9 RED tests `classify.test.ts`: one case per rule row, precedence collision (`.env` `Edit` → Ninja not Scribe), default fallback → Temp/`BaseCharacter`/`?` (decision 6), determinism (same input twice → same role).
 - [ ] 2.10 Implement `server/src/world/machine.ts`: pure `reduce(world, event, now)` reducer implementing the full transition table (design §2), including subagent choreography (walk-to-parent → speech bubble → secondary desk → report → lounge rest 15s → despawn).
@@ -82,7 +82,7 @@ Estimate is driven by five greenfield workspaces (`hooks/`, `server/`, `client/`
 ## Phase 3: Hooks
 
 - [ ] 3.1 Create `hooks/office-hook.sh`: POSIX `sh` + `curl`, stdin piped straight to `curl -s -m 1 -X POST --data-binary @- "$OFFICE_HUB_URL/events"`, backgrounded, `exit 0` unconditional (decision 8 — primary implementation per `openspec/research/hook-performance.md`).
-- [ ] 3.2 Create `hooks/office-hook.js`: Node fallback for hosts without `curl`, two-stage detached dispatch (stdin→child stdin, never argv/env), `uncaughtException`/`unhandledRejection`→`exit 0`, unref'd 50ms watchdog, imports limited to `node:http`, `node:crypto`, `node:os`, `node:child_process`.
+- [ ] 3.2 Create `hooks/office-hook.cjs`: Node fallback for hosts without `curl`, two-stage detached dispatch (stdin→child stdin, never argv/env), `uncaughtException`/`unhandledRejection`→`exit 0`, unref'd 50ms watchdog, imports limited to `node:http`, `node:crypto`, `node:os`, `node:child_process`.
 - [ ] 3.3 Create `hooks/settings.example.json`: all 8 lifecycle events (`SessionStart`, `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, `SubagentStart`, `SubagentStop`, `Stop`, `SessionEnd`) wired to `office-hook.sh` by default, with a documented one-line swap to the `.js` fallback, and a `PreToolUse` `Task`-matcher fallback comment for pre-2.1 builds without `SubagentStart` (decision 11).
 - [ ] 3.4 RED contract test `hooks/office-hook.test.ts`: spawn `office-hook.sh` (and `.js`) with no hub listening → assert `exit 0`, empty stdout, wall time < 50ms.
 - [ ] 3.5 RED contract test: same script against a hub returning HTTP 500 → `exit 0`.
