@@ -36,6 +36,12 @@ function runHook(script: string, stdin: string, env: Record<string, string> = {}
         });
       },
     );
+    // A hook that bails early (OFFICE_HOOK_DISABLED, unknown event) exits
+    // before draining stdin, so this write can land on a closed pipe. That
+    // EPIPE is the script behaving correctly, not a failure - swallow it here
+    // rather than letting it surface as an unhandled error that only appears
+    // when the whole monorepo suite runs in parallel.
+    child.stdin?.on('error', () => {});
     child.stdin?.end(stdin);
   });
 }
@@ -66,6 +72,15 @@ function startHub(status = 204) {
       resolve({ server, url: `http://127.0.0.1:${port}`, received });
     });
   });
+}
+
+
+/** Asserts exactly one request landed and narrows it for strict index access. */
+function only(received: Received[]): Received {
+  expect(received.length, 'expected exactly one delivered request').toBe(1);
+  const first = received[0];
+  if (first === undefined) throw new Error('unreachable: length asserted above');
+  return first;
 }
 
 const settle = () => new Promise((res) => setTimeout(res, 500));
@@ -183,12 +198,12 @@ describe.each(SCRIPTS)('%s - delivery integrity', (_name, script) => {
       await runHook(script, payload, { OFFICE_HUB_URL: hub.url });
       await settle();
 
-      expect(hub.received).toHaveLength(1);
-      expect(hub.received[0].bytes).toBeGreaterThan(0);
+      const got = only(hub.received);
+      expect(got.bytes).toBeGreaterThan(0);
       // Byte length, not character length: truncation appends a multibyte
       // ellipsis, so the two differ for any clipped payload.
-      expect(Buffer.byteLength(hub.received[0].body, 'utf8')).toBe(hub.received[0].bytes);
-      expect(() => JSON.parse(hub.received[0].body)).not.toThrow();
+      expect(Buffer.byteLength(got.body, 'utf8')).toBe(got.bytes);
+      expect(() => JSON.parse(got.body)).not.toThrow();
     } finally {
       hub.server.close();
     }
@@ -225,7 +240,7 @@ describe('office-hook.cjs - payload shape', () => {
       );
       await settle();
 
-      const sent = JSON.parse(hub.received[0].body);
+      const sent = JSON.parse(only(hub.received).body);
       expect(sent.v).toBe(1);
       expect(sent.event).toBe('PostToolUse');
       expect(sent.sessionId).toBe('s-1234');
@@ -252,7 +267,8 @@ describe('office-hook.cjs - payload shape', () => {
         OFFICE_MACHINE_ID: 'rpi',
       });
       await settle();
-      const [a, b] = hub.received.map((r) => JSON.parse(r.body).identityKey);
+      const keys = hub.received.map((r) => JSON.parse(r.body).identityKey as string);
+      const [a, b] = [keys.at(0), keys.at(1)];
       expect(a).toBe(b);
     } finally {
       hub.server.close();
@@ -266,7 +282,7 @@ describe('office-hook.cjs - payload shape', () => {
         OFFICE_HUB_URL: hub.url,
       });
       await settle();
-      const sent = JSON.parse(hub.received[0].body);
+      const sent = JSON.parse(only(hub.received).body);
       expect(sent.data.promptSummary.length).toBeLessThanOrEqual(80);
       expect(sent.data.promptLength).toBe(500);
     } finally {
@@ -282,10 +298,10 @@ describe('office-hook.cjs - payload shape', () => {
         OFFICE_REDACT_PROMPTS: 'true',
       });
       await settle();
-      const sent = JSON.parse(hub.received[0].body);
+      const sent = JSON.parse(only(hub.received).body);
       expect(sent.data.promptSummary).toBe('');
       expect(sent.data.promptLength).toBe(14);
-      expect(hub.received[0].body).not.toContain('secret');
+      expect(only(hub.received).body).not.toContain('secret');
     } finally {
       hub.server.close();
     }
@@ -303,7 +319,7 @@ describe('office-hook.cjs - payload shape', () => {
         { OFFICE_HUB_URL: hub.url },
       );
       await settle();
-      expect(hub.received[0].body).not.toContain('SUPER_SECRET_FILE_CONTENT');
+      expect(only(hub.received).body).not.toContain('SUPER_SECRET_FILE_CONTENT');
     } finally {
       hub.server.close();
     }

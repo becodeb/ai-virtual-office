@@ -2,7 +2,7 @@
   "name": "ai-virtual-office",
   "private": true,
   "version": "0.0.0",
-  "description": "AI Virtual Office — a browser diorama of Claude Code sessions as office workers.",
+  "description": "AI Virtual Office \u2014 a browser diorama of Claude Code sessions as office workers.",
   "engines": {
     "node": ">=20"
   },
@@ -10,7 +10,7 @@
   "scripts": {
     "assets:build": "pnpm --filter assets-pipeline run build:assets",
     "test": "vitest run",
-    "typecheck": "tsc -b --pretty",
+    "typecheck": "pnpm -r typecheck",
     "dev:server": "pnpm --filter server dev",
     "dev:client": "pnpm --filter client dev"
   },
