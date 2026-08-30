@@ -16,7 +16,15 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { REPO_ROOT, OUTPUT_ROOT } from './paths.js';
 
-const IGNORED_DIRS = new Set(['node_modules', '.git', 'dist', 'build', '.vite', 'assets', 'packages/assets-pipeline']);
+/**
+ * Directory names skipped wherever they appear in the tree. `node_modules` must
+ * match at any depth: `three` legitimately ships an `FBXLoader`, and every
+ * workspace gets its own nested copy, so a repo-root-only match lets
+ * `client/node_modules` fail this test for something no one wrote.
+ */
+const IGNORED_SEGMENTS = new Set(['node_modules', '.git', 'dist', 'build', '.vite']);
+/** Paths skipped only at this exact location, relative to the repo root. */
+const IGNORED_PATHS = ['assets', 'packages/assets-pipeline'];
 
 function walk(dir: string, baseForIgnoreCheck: string, files: string[] = []): string[] {
   let entries: string[];
@@ -28,7 +36,8 @@ function walk(dir: string, baseForIgnoreCheck: string, files: string[] = []): st
   for (const entry of entries) {
     const full = join(dir, entry);
     const rel = full.slice(baseForIgnoreCheck.length + 1).replaceAll('\\', '/');
-    if ([...IGNORED_DIRS].some((ignored) => rel === ignored || rel.startsWith(`${ignored}/`))) continue;
+    if (IGNORED_SEGMENTS.has(entry)) continue;
+    if (IGNORED_PATHS.some((ignored) => rel === ignored || rel.startsWith(`${ignored}/`))) continue;
     const stat = statSync(full);
     if (stat.isDirectory()) walk(full, baseForIgnoreCheck, files);
     else files.push(full);
