@@ -50,3 +50,33 @@ labels the event as inferred, not verified.
 **Why:** the hook observes tool invocations and exit codes, not test semantics. It will
 occasionally celebrate something that was not really a green suite. That is acceptable —
 it is a party, not a CI gate — but the UI must not claim more certainty than it has.
+
+---
+
+# Addendum: gaps surfaced by the spec phase
+
+## 6. The fallback role is "Temp"
+
+Any event whose tool and input shape match no entry in the cast table classifies as **Temp**:
+skin `BaseCharacter`, badge `?`. The classifier is total — every input maps somewhere.
+
+**Why:** the cast table has no default, and a classifier that can return nothing forces every
+consumer to handle null. `BaseCharacter.fbx` is the untextured grey base model that ships in
+the pack, so an unclassified worker literally shows up as a faceless temp nobody recognises.
+The joke and the engineering want the same thing.
+
+## 7. Heartbeat timeout sub-timings
+
+| Step | Delay | Visible behaviour |
+|---|---|---|
+| last event -> `SLEEPING` | 15 min | slumps at the desk, `Sitting_Idle_Loop`, head down |
+| `SLEEPING` -> `ZOMBIE` | +2 min | skin swaps to the Revenant, stands up |
+| `ZOMBIE` lap | ~20 s | one slow `Zombie_Walk_Fwd_Loop` circuit of the floor |
+| `ZOMBIE` -> `DESPAWNING` | on lap end | 3 s dissolve, desk released |
+
+Total from last event to gone: about 17 and a half minutes.
+
+**Why:** the proposal fixes only the 15-minute threshold. These sub-timings are chosen so the
+turn is legible to someone glancing at a second monitor — long enough to notice, short enough
+that a dead session does not haunt the floor. Any event arriving before `DESPAWNING`
+cancels the whole chain and returns the character to `SEATED_IDLE`.
