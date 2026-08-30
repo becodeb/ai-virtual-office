@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { distance, stepTowardFocusTarget } from './cameraMath.js';
+import { distance, fitZoomForFloor, isoOffsetForFloor, stepTowardFocusTarget } from './cameraMath.js';
 
 const isoOffset = { x: 8, y: 10, z: 8 };
 
@@ -48,5 +48,41 @@ describe('stepTowardFocusTarget (office-renderer spec: Focus-Agent camera follow
     const settled = { x: isoOffset.x, y: isoOffset.y, z: isoOffset.z };
     const next = stepTowardFocusTarget(settled, agentPos, isoOffset, 4, 1 / 60);
     expect(next).toEqual(settled);
+  });
+});
+
+describe('fitZoomForFloor', () => {
+  /**
+   * Regression: the zoom was pinned to 60, which shows about 15 world units on
+   * a phone in portrait. A 24-unit floor ran straight off the screen and the
+   * office looked like it had been cut in half.
+   */
+  it('frames the whole floor on a portrait phone', () => {
+    const zoom = fitZoomForFloor(16, 12, 923, 1600);
+    const visibleUnits = Math.min(923, 1600) / zoom;
+    expect(visibleUnits).toBeGreaterThanOrEqual(Math.hypot(16, 12));
+  });
+
+  it('frames the whole floor on a wide desktop', () => {
+    const zoom = fitZoomForFloor(16, 12, 2560, 1440);
+    const visibleUnits = Math.min(2560, 1440) / zoom;
+    expect(visibleUnits).toBeGreaterThanOrEqual(Math.hypot(16, 12));
+  });
+
+  it('zooms out for a bigger floor rather than cropping it', () => {
+    expect(fitZoomForFloor(40, 30, 1000, 1000)).toBeLessThan(fitZoomForFloor(16, 12, 1000, 1000));
+  });
+
+  it('never returns a non-positive zoom for a degenerate floor', () => {
+    expect(fitZoomForFloor(0, 0, 1000, 1000)).toBeGreaterThan(0);
+  });
+});
+
+describe('isoOffsetForFloor', () => {
+  it('grows with the floor so the camera always clears it', () => {
+    const small = isoOffsetForFloor(16, 12);
+    const large = isoOffsetForFloor(40, 30);
+    expect(large.y).toBeGreaterThan(small.y);
+    expect(small.y).toBeGreaterThan(12 * 0.5);
   });
 });

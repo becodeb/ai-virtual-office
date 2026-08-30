@@ -64,11 +64,34 @@ export function exportGLB(scene: THREE.Object3D, animations: THREE.AnimationClip
   });
 }
 
+/**
+ * Clears the unit-conversion scale the FBX importer leaves on the armature and
+ * the skinned mesh.
+ *
+ * `applyUniformScale` already rewrote the geometry AND the bone positions into
+ * final world units, so by the time a scene is exported the node scale is pure
+ * leftover — and it is 100. Left in place it silently multiplies a correctly
+ * normalised 1.05-unit character back up to ~105 units, producing a character
+ * taller than the building it works in. The geometry measures right, the export
+ * measures right in isolation, and only the assembled scene is wrong, which is
+ * why this survived a passing normalisation test.
+ *
+ * Bones are skipped: their local scale is part of the rig, not the import.
+ */
+function clearImporterScale(root: THREE.Object3D): void {
+  root.traverse((node) => {
+    if ((node as THREE.Bone).isBone) return;
+    node.scale.set(1, 1, 1);
+  });
+  root.updateMatrixWorld(true);
+}
+
 /** Builds a mesh-only scene (no clips) for one character skin's GLB. */
 export function buildCharacterScene(mesh: THREE.SkinnedMesh, skeletonRoot: THREE.Object3D): THREE.Group {
   const group = new THREE.Group();
   group.add(skeletonRoot);
   group.add(mesh);
+  clearImporterScale(group);
   return group;
 }
 
@@ -76,5 +99,6 @@ export function buildCharacterScene(mesh: THREE.SkinnedMesh, skeletonRoot: THREE
 export function buildAnimationsScene(skeletonRoot: THREE.Object3D): THREE.Group {
   const group = new THREE.Group();
   group.add(skeletonRoot);
+  clearImporterScale(group);
   return group;
 }

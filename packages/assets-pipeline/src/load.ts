@@ -49,3 +49,23 @@ export function extractBoneNames(root: THREE.Object3D): string[] {
   });
   return names;
 }
+
+/**
+ * Reloads a written character GLB and reports the world-space height it will
+ * actually render at.
+ *
+ * Geometry-level measurements are not enough: the FBX importer's node scale and
+ * the Z-up to Y-up rotation both sit between the vertex data and the file, so a
+ * character can measure exactly 1.05 in every intermediate check and still ship
+ * 250 times too large. Only the reloaded artifact settles it.
+ */
+export async function measureExportedStandingHeight(glbPath: string): Promise<number> {
+  const buffer = readFileSync(glbPath);
+  const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
+  const gltf = await new Promise<GLTF>((resolve, reject) => {
+    new GLTFLoader().parse(arrayBuffer, '', resolve, reject);
+  });
+  gltf.scene.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(gltf.scene);
+  return box.max.y - box.min.y;
+}

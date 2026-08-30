@@ -26,6 +26,10 @@ services:
       # Set to "true" to strip every task and prompt summary from the labels.
       OFFICE_REDACT_PROMPTS: "${OFFICE_REDACT_PROMPTS:-false}"
       OFFICE_IDENTITY_PATH: /data/identities.json
+      # A synthetic cast so the office is alive before any hook is installed —
+      # an empty office is indistinguishable from a broken one. Demo sessions
+      # run through the same code path as real ones and are named `demo-*`.
+      OFFICE_DEMO: "${OFFICE_DEMO:-true}"
     volumes:
       # Coffee counts, ranks and assigned skins survive a restart. Without this
       # the leaderboard resets every deploy and promotions never happen.

@@ -69,7 +69,7 @@ export interface FloorLayout {
   loungeSeats: SeatSocket[];
 }
 
-type RawFacing = 'north' | 'south';
+type RawFacing = 'north' | 'south' | 'east' | 'west';
 
 interface RawDesk {
   id: string;
@@ -97,16 +97,52 @@ interface RawFloor {
   lounge: { seats: RawSeat[] };
 }
 
+/**
+ * Rotation about Y, where the forward vector (0,0,1) rotates to
+ * (sin t, 0, cos t): 0 faces +z (south), PI faces -z (north), PI/2 faces +x
+ * (east) and -PI/2 faces -x (west).
+ *
+ * All four cases are handled explicitly. An earlier version returned PI for
+ * anything that was not 'south', which silently pointed every east- and
+ * west-facing seat north — a whole desk bank sitting with its back to its own
+ * desk, with nothing in any log to say so.
+ */
 function facingToRad(facing: RawFacing): number {
-  return facing === 'south' ? 0 : Math.PI;
+  switch (facing) {
+    case 'south':
+      return 0;
+    case 'north':
+      return Math.PI;
+    case 'east':
+      return Math.PI / 2;
+    case 'west':
+      return -Math.PI / 2;
+  }
 }
 
-function seatSocketFromCell(cell: [number, number], facing: RawFacing): SeatSocket {
+/**
+ * How far a desk chair sits from the centre of its own grid cell, toward the
+ * desk it faces.
+ *
+ * A seat cell is one full unit from its desk cell. Drawing the chair at the
+ * cell centre leaves a desk (0.39 deep) and a chair (0.31 deep) with 0.65 units
+ * of empty floor between them, which reads as furniture that has been pushed
+ * apart rather than an office. The logical cell stays put for pathfinding and
+ * occupancy; only the rendered socket moves.
+ */
+export const SEAT_DESK_OFFSET = 0.45;
+
+function seatSocketFromCell(cell: [number, number], facing: RawFacing, pullToward = 0): SeatSocket {
+  const rad = facingToRad(facing);
   return {
     cell,
     standCell: cell,
-    position: { x: cell[0] + 0.5, y: CHAIR_SEAT_HEIGHT, z: cell[1] + 0.5 },
-    facingRad: facingToRad(facing),
+    position: {
+      x: cell[0] + 0.5 + Math.sin(rad) * pullToward,
+      y: CHAIR_SEAT_HEIGHT,
+      z: cell[1] + 0.5 + Math.cos(rad) * pullToward,
+    },
+    facingRad: rad,
   };
 }
 
@@ -126,7 +162,8 @@ export function parseFloorLayout(raw: RawFloor): FloorLayout {
     desks: raw.desks.map((d) => ({
       id: d.id,
       cell: d.cell,
-      seat: seatSocketFromCell(d.seatCell, d.facing),
+      // Desk chairs pull toward their desk; lounge sofas sit at their cell centre.
+      seat: seatSocketFromCell(d.seatCell, d.facing, SEAT_DESK_OFFSET),
       window: d.window ?? false,
     })),
     loungeSeats: raw.lounge.seats.map((s) => seatSocketFromCell(s.cell, s.facing)),

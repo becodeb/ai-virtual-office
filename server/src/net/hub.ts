@@ -72,14 +72,19 @@ export function buildAgentSnapshot(agent: AgentRecord): AgentSnapshot {
   };
 }
 
-export function buildWorldSnapshot(world: WorldState): WorldSnapshot {
+export interface CoffeeLeaderboardEntry {
+  name: string;
+  count: number;
+}
+
+export function buildWorldSnapshot(world: WorldState, hud: unknown = {}): WorldSnapshot {
   return {
     layout: world.layout,
     props: [],
     desks: world.desks.desks.map((d) => ({ deskId: d.id, occupiedBy: world.desks.occupantOf(d.id) })),
     agents: Array.from(world.agents.values()).map(buildAgentSnapshot),
     npcs: Array.from(world.npcs.values()),
-    hud: {},
+    hud,
   };
 }
 
@@ -101,6 +106,10 @@ export class OfficeHub {
   private readonly clients = new Map<WebSocket, ClientConn>();
   private readonly lastAgentSnapshots = new Map<string, AgentSnapshot>();
   private readonly lastDeskOccupancy = new Map<string, string | null>();
+  /** Latest HUD payload, refreshed from the tick and broadcast when it changes. */
+  private hud: unknown = {};
+  private lastHudJson = '{}';
+  private lastBroadcastHudJson = '{}';
   private readonly now: () => number;
 
   constructor(
@@ -146,7 +155,19 @@ export class OfficeHub {
   }
 
   private sendSnapshot(ws: WebSocket): void {
-    this.send(ws, { t: 'snapshot', seq: this.ring.currentSeq, world: buildWorldSnapshot(this.world) });
+    this.send(ws, { t: 'snapshot', seq: this.ring.currentSeq, world: buildWorldSnapshot(this.world, this.hud) });
+  }
+
+  /**
+   * Replaces the HUD payload. Compared by serialised value so an unchanged
+   * board costs nothing: the leaderboard is recomputed every tick but only
+   * actually moves when somebody finishes a coffee run.
+   */
+  setHud(next: unknown): void {
+    const json = JSON.stringify(next);
+    if (json === this.lastHudJson) return;
+    this.lastHudJson = json;
+    this.hud = next;
   }
 
   private onMessage(ws: WebSocket, conn: ClientConn, data: RawData): void {
@@ -216,7 +237,7 @@ export class OfficeHub {
 
   /** Recomputes deltas since the last call and broadcasts them. Call once per server tick. */
   publishDeltas(): DeltaOp[] {
-    const ops = [...this.diffAgents(), ...this.diffDesks()];
+    const ops = [...this.diffAgents(), ...this.diffDesks(), ...this.diffHud()];
     if (ops.length === 0) return ops;
     const entry = this.ring.push(ops);
     const frame: ServerFrame = { t: 'delta', seq: entry.seq, ops };
@@ -240,6 +261,12 @@ export class OfficeHub {
         this.clients.delete(ws);
       }
     }
+  }
+
+  private diffHud(): DeltaOp[] {
+    if (this.lastHudJson === this.lastBroadcastHudJson) return [];
+    this.lastBroadcastHudJson = this.lastHudJson;
+    return [{ op: 'hud', hud: this.hud }];
   }
 
   private diffAgents(): DeltaOp[] {

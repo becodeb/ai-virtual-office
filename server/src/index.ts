@@ -12,6 +12,7 @@ import { createWorld, reduce } from './world/machine.js';
 import { IdentityStore } from './world/identity.js';
 import { applyP1OnHookEvent, runP1Behaviors } from './p1/index.js';
 import { createStaticHandler } from './net/static.js';
+import { DemoDriver, demoEnabled } from './demo.js';
 
 // Must match the hook's own default in hooks/office-hook.sh and
 // hooks/settings.example.json. If these two ever drift apart, a fresh install
@@ -121,14 +122,49 @@ const server = createServer((req, res) => {
 
 const hub = new OfficeHub(server, world, { redactPrompts, tickRate: TICK_RATE_HZ });
 
+/**
+ * Demo mode feeds synthetic sessions through the exact same reduction the real
+ * hook drives, so an office with nobody in it is never mistaken for a broken
+ * one. Off unless asked for.
+ */
+const demo = demoEnabled()
+  ? new DemoDriver({
+      emit: (payload) => {
+        const eventNow = Date.now();
+        reduce(world, { kind: 'hook', payload }, eventNow);
+        applyP1OnHookEvent(world, payload, eventNow);
+        identities.touch(payload.identityKey);
+      },
+    })
+  : null;
+
 const tickTimer = setInterval(() => {
   const now = Date.now();
+  demo?.tick(now);
   const effects = reduce(world, { kind: 'tick' }, now);
+  hub.setHud(buildHud());
   runP1Behaviors(world, effects, identities, hub, now);
   hub.publishDeltas();
   hub.closeIdleConnections();
 }, TICK_INTERVAL_MS);
 tickTimer.unref();
+
+/**
+ * The coffee leaderboard, built from who is currently in the office rather than
+ * from every identity ever seen. A board listing people who left last Tuesday
+ * is trivia; a board listing the people you can see on screen is a scoreboard.
+ */
+function buildHud(): { coffeeLeaderboard: Array<{ name: string; count: number }> } {
+  const byMachine = new Map<string, number>();
+  for (const agent of world.agents.values()) {
+    if (agent.isSubagent) continue;
+    const count = identities.get(agent.identityKey).coffeeCount;
+    byMachine.set(agent.machineId, Math.max(byMachine.get(agent.machineId) ?? 0, count));
+  }
+  return {
+    coffeeLeaderboard: Array.from(byMachine, ([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count),
+  };
+}
 
 function shutdown(): void {
   identities.flush();
@@ -159,7 +195,7 @@ server.listen(PORT, HOST, () => {
   // eslint-disable-next-line no-console
   console.log(
     `[office] hub listening on http://${HOST}:${PORT} ` +
-      `(redactPrompts=${redactPrompts}, static=${serveStatic !== null ? process.env.OFFICE_STATIC_DIR : 'off'})`,
+      `(redactPrompts=${redactPrompts}, static=${serveStatic !== null ? process.env.OFFICE_STATIC_DIR : 'off'}, demo=${demo !== null})`,
   );
 });
 

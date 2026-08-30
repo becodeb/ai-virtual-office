@@ -12,6 +12,7 @@
  *   pnpm assets:build --skins Worker_Male,Wizard   # convert a subset (fast, for local iteration)
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import * as THREE from 'three';
 import { CURATED_SKINS, type SkinName } from '@virtual-office/shared';
 import {
@@ -26,7 +27,7 @@ import {
   UAL2_GLB,
 } from './paths.js';
 import { assertSingleRig, boneSignature, listFbxFiles } from './discover.js';
-import { extractBoneNames, findSkinnedMesh, loadFbx, loadGltf } from './load.js';
+import { extractBoneNames, findSkinnedMesh, loadFbx, loadGltf, measureExportedStandingHeight } from './load.js';
 import { buildRetargeter, type RetargetRig, retargetClipWorldDelta, HIP_BONE, IK_BONES } from './retarget.js';
 import { assertNoFlatPelvisAcrossAllClips, verifyClips } from './verify.js';
 import {
@@ -122,7 +123,13 @@ async function main() {
     `[assets-pipeline] reference skin vertex count: ${referenceIndexed.vertexCountBefore} -> ${referenceIndexed.vertexCountAfter}`
   );
   stripUVs(referenceIndexed.geometry);
-  const scaleFactor = normalizeScale(referenceIndexed.geometry, referenceSkinned.skeleton, TARGET_STANDING_HEIGHT);
+  referenceSkinned.updateMatrixWorld(true);
+  const scaleFactor = normalizeScale(
+    referenceIndexed.geometry,
+    referenceSkinned.skeleton,
+    TARGET_STANDING_HEIGHT,
+    referenceSkinned.matrixWorld
+  );
   console.log(`[assets-pipeline] normalization factor: ${scaleFactor.toFixed(6)} (target height ${TARGET_STANDING_HEIGHT})`);
 
   // Apply the same factor to every retargeted clip's hip/IK-foot position tracks.
@@ -204,9 +211,19 @@ async function main() {
   });
   writeManifest(OUTPUT_MANIFEST_JSON, manifest);
 
-  console.log(
-    `[assets-pipeline] standing height check (reference skin, post-normalization): ${computeStandingHeight(referenceIndexed.geometry).toFixed(3)}`
-  );
+  // Measure what actually shipped, not what we intended. Every geometry-level
+  // check reported the target exactly while the exported characters were 250x
+  // too tall, because the importer's node scale and the Z-up/Y-up rotation both
+  // sit between the geometry and the file. Reload the written GLB and measure
+  // its world-space height; that is the only number the renderer ever sees.
+  const shipped = await measureExportedStandingHeight(join(OUTPUT_CHARACTERS_DIR, `${REFERENCE_SKIN}.glb`));
+  console.log(`[assets-pipeline] shipped standing height (${REFERENCE_SKIN}.glb, world space): ${shipped.toFixed(3)}`);
+  if (Math.abs(shipped - TARGET_STANDING_HEIGHT) > 0.15) {
+    throw new Error(
+      `Exported character stands ${shipped.toFixed(3)} world units tall, expected ~${TARGET_STANDING_HEIGHT}. ` +
+        `A character this size renders as an unrecognisable mass next to 1.29-unit walls.`
+    );
+  }
   console.log(`[assets-pipeline] done in ${((Date.now() - t0) / 1000).toFixed(1)}s`);
 }
 

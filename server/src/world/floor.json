@@ -1,44 +1,234 @@
 {
-  "width": 24,
-  "height": 18,
-  "elevatorCell": [0, 9],
-  "fireExitCell": [23, 9],
+  "width": 16,
+  "height": 12,
+  "elevatorCell": [
+    1,
+    5
+  ],
+  "fireExitCell": [
+    14,
+    10
+  ],
   "kitchen": {
-    "coffeeMachineCell": [2, 15],
-    "standCell": [3, 15]
+    "coffeeMachineCell": [
+      14,
+      1
+    ],
+    "standCell": [
+      13,
+      1
+    ]
   },
   "meetingRoom": {
-    "screenCell": [2, 1]
+    "screenCell": [
+      1,
+      1
+    ]
   },
   "bear": {
-    "cell": [15, 2],
-    "standCell": [15, 3]
+    "cell": [
+      1,
+      10
+    ],
+    "standCell": [
+      2,
+      10
+    ]
   },
   "architect": {
-    "cell": [21, 15]
+    "cell": [
+      14,
+      5
+    ]
   },
   "desks": [
-    { "id": "D1", "cell": [3, 3], "seatCell": [3, 4], "facing": "north" },
-    { "id": "D2", "cell": [5, 3], "seatCell": [5, 4], "facing": "north" },
-    { "id": "D3", "cell": [7, 3], "seatCell": [7, 4], "facing": "north" },
-    { "id": "D4", "cell": [9, 3], "seatCell": [9, 4], "facing": "north" },
-    { "id": "D5", "cell": [11, 3], "seatCell": [11, 4], "facing": "north" },
-    { "id": "D6", "cell": [13, 3], "seatCell": [13, 4], "facing": "north", "window": true },
-    { "id": "D7", "cell": [3, 8], "seatCell": [3, 7], "facing": "south" },
-    { "id": "D8", "cell": [5, 8], "seatCell": [5, 7], "facing": "south" },
-    { "id": "D9", "cell": [7, 8], "seatCell": [7, 7], "facing": "south" },
-    { "id": "D10", "cell": [9, 8], "seatCell": [9, 7], "facing": "south" },
-    { "id": "D11", "cell": [11, 8], "seatCell": [11, 7], "facing": "south" },
-    { "id": "D12", "cell": [13, 8], "seatCell": [13, 7], "facing": "south", "window": true }
+    {
+      "id": "D1",
+      "cell": [
+        4,
+        3
+      ],
+      "seatCell": [
+        5,
+        3
+      ],
+      "facing": "west",
+      "window": true
+    },
+    {
+      "id": "D2",
+      "cell": [
+        4,
+        4
+      ],
+      "seatCell": [
+        5,
+        4
+      ],
+      "facing": "west",
+      "window": false
+    },
+    {
+      "id": "D3",
+      "cell": [
+        4,
+        5
+      ],
+      "seatCell": [
+        5,
+        5
+      ],
+      "facing": "west",
+      "window": false
+    },
+    {
+      "id": "D4",
+      "cell": [
+        4,
+        6
+      ],
+      "seatCell": [
+        5,
+        6
+      ],
+      "facing": "west",
+      "window": false
+    },
+    {
+      "id": "D5",
+      "cell": [
+        4,
+        7
+      ],
+      "seatCell": [
+        5,
+        7
+      ],
+      "facing": "west",
+      "window": false
+    },
+    {
+      "id": "D6",
+      "cell": [
+        4,
+        8
+      ],
+      "seatCell": [
+        5,
+        8
+      ],
+      "facing": "west",
+      "window": false
+    },
+    {
+      "id": "D7",
+      "cell": [
+        9,
+        3
+      ],
+      "seatCell": [
+        8,
+        3
+      ],
+      "facing": "east",
+      "window": true
+    },
+    {
+      "id": "D8",
+      "cell": [
+        9,
+        4
+      ],
+      "seatCell": [
+        8,
+        4
+      ],
+      "facing": "east",
+      "window": false
+    },
+    {
+      "id": "D9",
+      "cell": [
+        9,
+        5
+      ],
+      "seatCell": [
+        8,
+        5
+      ],
+      "facing": "east",
+      "window": false
+    },
+    {
+      "id": "D10",
+      "cell": [
+        9,
+        6
+      ],
+      "seatCell": [
+        8,
+        6
+      ],
+      "facing": "east",
+      "window": false
+    },
+    {
+      "id": "D11",
+      "cell": [
+        9,
+        7
+      ],
+      "seatCell": [
+        8,
+        7
+      ],
+      "facing": "east",
+      "window": false
+    },
+    {
+      "id": "D12",
+      "cell": [
+        9,
+        8
+      ],
+      "seatCell": [
+        8,
+        8
+      ],
+      "facing": "east",
+      "window": false
+    }
   ],
   "lounge": {
     "seats": [
-      { "cell": [17, 2], "facing": "south" },
-      { "cell": [19, 2], "facing": "south" },
-      { "cell": [21, 2], "facing": "south" },
-      { "cell": [17, 4], "facing": "north" },
-      { "cell": [19, 4], "facing": "north" },
-      { "cell": [21, 4], "facing": "north" }
+      {
+        "cell": [
+          11,
+          7
+        ],
+        "facing": "south"
+      },
+      {
+        "cell": [
+          12,
+          7
+        ],
+        "facing": "south"
+      },
+      {
+        "cell": [
+          11,
+          9
+        ],
+        "facing": "north"
+      },
+      {
+        "cell": [
+          12,
+          9
+        ],
+        "facing": "north"
+      }
     ]
   }
 }

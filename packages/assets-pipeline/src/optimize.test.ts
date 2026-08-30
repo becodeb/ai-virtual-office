@@ -128,11 +128,29 @@ describe('normalizeScale', () => {
     expect(child.position.y).toBeCloseTo(60 * factor, 5);
   });
 
+  /** A minimal but orientable rig: a root below a head, which is all the up-axis detection needs. */
+  function orientableSkeleton(): THREE.Skeleton {
+    const root = new THREE.Bone();
+    root.name = 'Body';
+    const head = new THREE.Bone();
+    head.name = 'Head';
+    head.position.set(0, 60, 0);
+    root.add(head);
+    root.updateMatrixWorld(true);
+    return new THREE.Skeleton([root, head]);
+  }
+
   it('throws on a degenerate zero-height geometry rather than dividing by zero silently', () => {
     const geometry = new THREE.BufferGeometry();
+    // Flat on the rig's up axis: two points at the same height.
     geometry.setAttribute('position', new THREE.Float32BufferAttribute([0, 5, 0, 1, 5, 0], 3));
-    const skeleton = new THREE.Skeleton([]);
-    expect(() => normalizeScale(geometry, skeleton)).toThrow(/non-positive raw standing height/);
+    expect(() => normalizeScale(geometry, orientableSkeleton())).toThrow(/non-positive raw standing height/);
+  });
+
+  it('refuses to guess an up axis for a rig it cannot orient', () => {
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 0, 175, 0], 3));
+    expect(() => normalizeScale(geometry, new THREE.Skeleton([]))).toThrow(/no Head bone/);
   });
 });
 

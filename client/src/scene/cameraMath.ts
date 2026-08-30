@@ -25,3 +25,38 @@ function distance(a: Vec3Like, b: Vec3Like): number {
 }
 
 export { distance };
+
+/**
+ * The orthographic zoom that frames a whole floor in the current viewport.
+ *
+ * An orthographic camera shows `viewportPixels / zoom` world units, so a fixed
+ * zoom crops whatever does not happen to fit. At zoom 60 a phone in portrait
+ * shows about 15 world units — a 24-unit floor simply ran off the edge of the
+ * screen, and the office looked like it had been cut in half.
+ *
+ * The floor is viewed from a 45-degree yaw, so the widest thing the camera has
+ * to cover is its diagonal footprint. Framing the bounding circle of that
+ * footprint handles every viewport aspect ratio, portrait included, without
+ * special cases.
+ */
+export function fitZoomForFloor(
+  floorWidth: number,
+  floorHeight: number,
+  viewportWidth: number,
+  viewportHeight: number,
+  margin = 1.25
+): number {
+  const radius = Math.hypot(floorWidth, floorHeight) / 2;
+  const needed = radius * 2 * margin;
+  if (needed <= 0) return 1;
+  return Math.min(viewportWidth, viewportHeight) / needed;
+}
+
+/**
+ * Camera offset from the floor centre, scaled so it always clears the diorama.
+ * A fixed offset that comfortably clears a small floor sits inside a large one.
+ */
+export function isoOffsetForFloor(floorWidth: number, floorHeight: number): Vec3Like {
+  const reach = Math.max(floorWidth, floorHeight);
+  return { x: reach * 0.6, y: reach * 0.75, z: reach * 0.6 };
+}

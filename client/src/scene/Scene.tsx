@@ -24,7 +24,13 @@ export function Scene({ layout, manifest, cameraMode, onCameraModeChange, focusA
 
   return (
     <>
-      <CameraRig floorCenter={floorCenter} mode={cameraMode} onModeChange={onCameraModeChange} />
+      <CameraRig
+        floorCenter={floorCenter}
+        floorWidth={layout.width}
+        floorHeight={layout.height}
+        mode={cameraMode}
+        onModeChange={onCameraModeChange}
+      />
       <ambientLight intensity={0.7} />
       <directionalLight position={[10, 15, 5]} intensity={1.1} castShadow={false} />
       <Floor layout={layout} />

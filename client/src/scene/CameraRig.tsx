@@ -7,32 +7,39 @@
  * toggles between modes; clicking a character (via `Agent`'s `onSelect`)
  * focuses it and emits a `focus` WS message.
  */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { MapControls, OrthographicCamera } from '@react-three/drei';
 import * as THREE from 'three';
 import type { MapControls as MapControlsImpl } from 'three-stdlib';
 import { useWorldStore } from '../state/store.js';
-import { stepTowardFocusTarget } from './cameraMath.js';
+import { fitZoomForFloor, isoOffsetForFloor, stepTowardFocusTarget } from './cameraMath.js';
 
 export type CameraMode = 'free' | 'focus';
 
-/** A fixed isometric offset from the focused agent — classic 45°-ish diorama angle. */
-const ISO_OFFSET = new THREE.Vector3(8, 10, 8);
 const FOCUS_DAMPING = 4; // per-second lerp factor.
 
 export interface CameraRigProps {
   floorCenter: THREE.Vector3;
+  floorWidth: number;
+  floorHeight: number;
   mode: CameraMode;
   onModeChange: (mode: CameraMode) => void;
 }
 
-export function CameraRig({ floorCenter, mode, onModeChange }: CameraRigProps): JSX.Element {
-  const { camera } = useThree();
+export function CameraRig({ floorCenter, floorWidth, floorHeight, mode, onModeChange }: CameraRigProps): JSX.Element {
+  const { camera, size } = useThree();
   const focusAgentId = useWorldStore((s) => s.focusAgentId);
   const agents = useWorldStore((s) => s.agents);
   const controlsRef = useRef<MapControlsImpl | null>(null);
-  const [zoom] = useState(60);
+
+  // Both derive from the floor and the viewport rather than being pinned to
+  // constants that only suit one screen and one floor size.
+  const isoOffset = useMemo(() => isoOffsetForFloor(floorWidth, floorHeight), [floorWidth, floorHeight]);
+  const zoom = useMemo(
+    () => fitZoomForFloor(floorWidth, floorHeight, size.width, size.height),
+    [floorWidth, floorHeight, size.width, size.height]
+  );
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent): void {
@@ -53,7 +60,7 @@ export function CameraRig({ floorCenter, mode, onModeChange }: CameraRigProps): 
     if (mode !== 'focus' || focusAgentId === null) return;
     const agent = agents.get(focusAgentId);
     if (agent === undefined) return;
-    const next = stepTowardFocusTarget(camera.position, agent.position, ISO_OFFSET, FOCUS_DAMPING, delta);
+    const next = stepTowardFocusTarget(camera.position, agent.position, isoOffset, FOCUS_DAMPING, delta);
     camera.position.set(next.x, next.y, next.z);
     camera.lookAt(agent.position.x, agent.position.y, agent.position.z);
   });
@@ -62,10 +69,10 @@ export function CameraRig({ floorCenter, mode, onModeChange }: CameraRigProps): 
     <>
       <OrthographicCamera
         makeDefault
-        position={[floorCenter.x + ISO_OFFSET.x, ISO_OFFSET.y, floorCenter.z + ISO_OFFSET.z]}
+        position={[floorCenter.x + isoOffset.x, isoOffset.y, floorCenter.z + isoOffset.z]}
         zoom={zoom}
         near={0.1}
-        far={200}
+        far={Math.max(200, Math.max(floorWidth, floorHeight) * 6)}
       />
       <MapControls
         ref={controlsRef}

@@ -125,11 +125,55 @@ export function hasNoUVAttributes(geometry: THREE.BufferGeometry): boolean {
   return !geometry.attributes['uv'] && !geometry.attributes['uv1'] && !geometry.attributes['uv2'];
 }
 
-/** Standing height from the geometry's bind-pose bounding box (Y extent). */
-export function computeStandingHeight(geometry: THREE.BufferGeometry): number {
+/**
+ * Finds which local axis the character actually stands on, by asking the rig.
+ *
+ * The source FBX is Z-up while glTF is Y-up, so the "obvious" Y extent of the
+ * bind-pose geometry is the character's front-to-back DEPTH, not its height.
+ * Normalising that axis leaves a character 2.5x too tall while every
+ * geometry-level measurement still reports the target exactly — which is how
+ * the mistake survives a passing test.
+ *
+ * Rather than hardcode a different axis and hope, derive it: the vector from a
+ * foot bone to the head bone is the up axis by definition, whatever the
+ * exporter did.
+ */
+function upAxisFromSkeleton(skeleton: THREE.Skeleton, geometryFrame: THREE.Matrix4): 'x' | 'y' | 'z' {
+  const byName = new Map(skeleton.bones.map((b) => [b.name, b]));
+  // A foot bone is the truest "bottom", but any rig root works: the axis only
+  // needs two points that are vertically apart, and a pelvis is below a head.
+  const foot = byName.get('FootL') ?? byName.get('LowerLegL') ?? skeleton.bones[0];
+  const head = byName.get('Head');
+  if (foot === undefined || head === undefined) {
+    throw new Error('upAxisFromSkeleton: rig has no Head bone to orient from');
+  }
+  for (const bone of skeleton.bones) bone.updateMatrixWorld(true);
+
+  // Bone world positions live in the scene frame, which the FBX importer has
+  // already rotated to Y-up. The geometry bounding box is in the mesh's own
+  // local frame, which is still Z-up. Comparing the two directly compares
+  // nothing — pull the bones into the geometry's frame first.
+  const toGeometry = geometryFrame.clone().invert();
+  const delta = head
+    .getWorldPosition(new THREE.Vector3())
+    .applyMatrix4(toGeometry)
+    .sub(foot.getWorldPosition(new THREE.Vector3()).applyMatrix4(toGeometry));
+
+  const abs = { x: Math.abs(delta.x), y: Math.abs(delta.y), z: Math.abs(delta.z) };
+  if (abs.x >= abs.y && abs.x >= abs.z) return 'x';
+  return abs.y >= abs.z ? 'y' : 'z';
+}
+
+/** Standing height from the geometry's bind-pose bounding box, along the rig's own up axis. */
+export function computeStandingHeight(
+  geometry: THREE.BufferGeometry,
+  skeleton?: THREE.Skeleton,
+  geometryFrame: THREE.Matrix4 = new THREE.Matrix4()
+): number {
   geometry.computeBoundingBox();
   const box = geometry.boundingBox!;
-  return box.max.y - box.min.y;
+  const axis = skeleton === undefined ? 'y' : upAxisFromSkeleton(skeleton, geometryFrame);
+  return box.max[axis] - box.min[axis];
 }
 
 /**
@@ -141,9 +185,10 @@ export function computeStandingHeight(geometry: THREE.BufferGeometry): number {
 export function normalizeScale(
   geometry: THREE.BufferGeometry,
   skeleton: THREE.Skeleton,
-  targetHeight: number = TARGET_STANDING_HEIGHT
+  targetHeight: number = TARGET_STANDING_HEIGHT,
+  geometryFrame: THREE.Matrix4 = new THREE.Matrix4()
 ): number {
-  const rawHeight = computeStandingHeight(geometry);
+  const rawHeight = computeStandingHeight(geometry, skeleton, geometryFrame);
   if (rawHeight <= 0) throw new Error(`normalizeScale: non-positive raw standing height ${rawHeight}`);
   const factor = targetHeight / rawHeight;
   applyUniformScale(geometry, skeleton, factor);
