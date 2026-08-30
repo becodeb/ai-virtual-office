@@ -251,6 +251,20 @@ export class OfficeHub {
       const previous = this.lastAgentSnapshots.get(agent.agentId);
       if (previous === undefined) {
         ops.push({ op: 'agent_add', agent: snapshot });
+      } else if (
+        previous.role !== snapshot.role ||
+        previous.skin !== snapshot.skin ||
+        previous.badge !== snapshot.badge ||
+        previous.deskId !== snapshot.deskId
+      ) {
+        // A character's visual identity changed: it was reclassified as its
+        // first real tool call arrived, it turned into a Revenant, or it moved
+        // desks. There is no narrow op for any of these, and `agent_add` is an
+        // upsert on the client, so re-sending the whole snapshot is both the
+        // cheapest and the only lossless way to say it. Without this an agent
+        // wears whatever role it was born with for the rest of its life, and
+        // every classification the hub performs after spawn is invisible.
+        ops.push({ op: 'agent_add', agent: snapshot });
       } else {
         if (previous.state !== snapshot.state) {
           ops.push({ op: 'agent_state', agentId: agent.agentId, state: snapshot.state });

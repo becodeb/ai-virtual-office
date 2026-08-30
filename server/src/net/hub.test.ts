@@ -122,6 +122,59 @@ describe('OfficeHub — snapshot-then-delta protocol', () => {
   });
 });
 
+describe('OfficeHub — visual identity changes reach the client', () => {
+  const hook = (event: string, data: Record<string, unknown>, sessionId = 'sess-x') =>
+    ({
+      v: 1,
+      event,
+      sessionId,
+      parentSessionId: null,
+      machineId: 'm1',
+      cwd: '/home/x/proj',
+      project: 'proj',
+      identityKey: 'idk-1',
+      ts: Date.now(),
+      data,
+    }) as never;
+
+  /**
+   * Regression: the diff only reported `state` and `taskText`, so a character
+   * kept whatever role it was born with forever. A session that spawns before
+   * its first tool call is classified as the fallback, and every later
+   * reclassification — including the turn into a Revenant — never reached the
+   * screen.
+   */
+  it('re-sends the agent when its role and skin change after spawn', () => {
+    const now = Date.now();
+    reduce(world, { kind: 'hook', payload: hook('SessionStart', { source: 'startup', model: 'x' }) }, now);
+    hub.publishDeltas();
+
+    const before = hub.publishDeltas();
+    expect(before).toHaveLength(0);
+
+    reduce(
+      world,
+      {
+        kind: 'hook',
+        payload: hook('PreToolUse', {
+          tool: 'Bash',
+          toolUseId: 't1',
+          input: { command: 'git push --force origin main', argv0: 'git' },
+        }),
+      },
+      now
+    );
+
+    const ops = hub.publishDeltas();
+    const upsert = ops.find((op) => op.op === 'agent_add');
+    expect(upsert, 'no agent_add emitted for the reclassification').toBeDefined();
+    if (upsert?.op === 'agent_add') {
+      expect(upsert.agent.role).toBe('Pirate');
+      expect(upsert.agent.skin).toMatch(/^Pirate_/);
+    }
+  });
+});
+
 describe('OfficeHub — ping/pong and egg rate limiting', () => {
   it('replies to ping with pong echoing clientTime', async () => {
     const ws = await connect();
