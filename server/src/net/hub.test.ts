@@ -132,10 +132,34 @@ describe('OfficeHub — ping/pong and egg rate limiting', () => {
     ws.close();
   });
 
+  it('sends nothing at all until the client has completed the handshake', async () => {
+    const ws = await connect();
+    const received: ServerFrame[] = [];
+    ws.on('message', (data) => received.push(JSON.parse(data.toString())));
+
+    // Force at least one tick's worth of broadcast while the client is silent.
+    hub.publishDeltas();
+    hub.broadcastEvent('dance_party');
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    expect(received, 'frames leaked to an unhandshaken client').toHaveLength(0);
+
+    send(ws, { t: 'hello', p: PROTOCOL_VERSION });
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(received[0]?.t).toBe('snapshot');
+    ws.close();
+  });
+
   it('rate-limits egg bursts to 3 per 10s and broadcasts on success', async () => {
     const ws = await connect();
     const received: ServerFrame[] = [];
     ws.on('message', (data) => received.push(JSON.parse(data.toString())));
+
+    // Broadcasts only reach clients that have completed the handshake, so a
+    // real client always gets here via `hello` first.
+    send(ws, { t: 'hello', p: PROTOCOL_VERSION });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    received.length = 0;
 
     send(ws, { t: 'egg', code: 'moo' });
     send(ws, { t: 'egg', code: 'moo' });

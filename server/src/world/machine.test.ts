@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { HookEventPayload } from '@virtual-office/shared';
+import { FALLBACK_ROLE, type HookEventPayload } from '@virtual-office/shared';
 import {
   createWorld,
   effectiveRole,
@@ -542,5 +542,92 @@ describe('machine — P1 The Architect NPC', () => {
 
     tick(world, T0 + ARCHITECT_REACTION_MS + 1);
     expect(world.npcs.get(ARCHITECT_NPC_ID)!.clip).toBe('Idle_FoldArms_Loop');
+  });
+});
+
+describe('role classification never regresses to the fallback', () => {
+  const hook = (
+    event: string,
+    data: Record<string, unknown>,
+    sessionId = 'sess-1'
+  ): HookEventPayload =>
+    ({
+      v: 1,
+      event,
+      sessionId,
+      parentSessionId: null,
+      machineId: 'eze-desktop',
+      cwd: '/home/eze/projects/thing',
+      project: 'thing',
+      identityKey: 'id-abc',
+      ts: Date.now(),
+      data,
+    }) as unknown as HookEventPayload;
+
+  /**
+   * Regression: an opening `UserPromptSubmit` classifies to the fallback, and
+   * used to consume the one-shot first-classification exemption. The session
+   * then needed three more matching events to escape Temp, so a real session
+   * spent its first minutes as a faceless grey placeholder purely because it
+   * happened to start with a prompt instead of a tool call.
+   */
+  it('an unclassifiable first prompt does not lock the agent to the fallback', () => {
+    const world = createWorld();
+    const now = Date.now();
+
+    reduce(world, { kind: 'hook', payload: hook('SessionStart', { source: 'startup', model: 'x' }) }, now);
+    reduce(
+      world,
+      { kind: 'hook', payload: hook('UserPromptSubmit', { promptSummary: 'do the thing', promptLength: 12 }) },
+      now
+    );
+    reduce(
+      world,
+      {
+        kind: 'hook',
+        payload: hook('PreToolUse', {
+          tool: 'Bash',
+          toolUseId: 't1',
+          input: { command: 'docker compose up -d', argv0: 'docker' },
+        }),
+      },
+      now
+    );
+
+    const agent = world.agents.get('sess-1');
+    expect(agent).toBeDefined();
+    expect(agent!.classifiedRole).not.toBe(FALLBACK_ROLE);
+    expect(agent!.skin).not.toBe('BaseCharacter');
+  });
+
+  it('a later unclassifiable event does not demote an already-known role', () => {
+    const world = createWorld();
+    const now = Date.now();
+
+    reduce(world, { kind: 'hook', payload: hook('SessionStart', { source: 'startup', model: 'x' }) }, now);
+    reduce(
+      world,
+      {
+        kind: 'hook',
+        payload: hook('PreToolUse', {
+          tool: 'Bash',
+          toolUseId: 't1',
+          input: { command: 'docker compose up -d', argv0: 'docker' },
+        }),
+      },
+      now
+    );
+    const known = world.agents.get('sess-1')!.classifiedRole;
+    expect(known).not.toBe(FALLBACK_ROLE);
+
+    // Three unclassifiable events in a row must not build a streak toward Temp.
+    for (let i = 0; i < 3; i += 1) {
+      reduce(
+        world,
+        { kind: 'hook', payload: hook('UserPromptSubmit', { promptSummary: 'hmm', promptLength: 3 }) },
+        now
+      );
+    }
+    expect(world.agents.get('sess-1')!.classifiedRole).toBe(known);
   });
 });

@@ -38,6 +38,14 @@ interface ClientConn {
   lastActivityAt: number;
   focusAgentId: string | null;
   eggBucket: EggBucket;
+  /**
+   * False until the client has completed the `hello` handshake and been given
+   * either a snapshot or a gap-free replay. Broadcasts skip connections that
+   * are not ready: a client that receives deltas before it has any world to
+   * apply them to would be mutating agents it has never heard of, and a client
+   * on a mismatched protocol would be handed data before it is rejected.
+   */
+  ready: boolean;
 }
 
 export interface HubConfig {
@@ -106,6 +114,10 @@ export class OfficeHub {
       handleProtocols: (protocols) => (protocols.has(PROTOCOL_VERSION) ? PROTOCOL_VERSION : false),
     });
     this.wss.on('connection', (ws) => this.onConnection(ws));
+    // `ws` re-emits the shared HTTP server's errors, and an unhandled 'error'
+    // on a WebSocketServer throws. The entrypoint owns the actual reporting and
+    // exit; this listener only keeps the throw from pre-empting it.
+    this.wss.on('error', () => {});
   }
 
   get connectionCount(): number {
@@ -121,6 +133,7 @@ export class OfficeHub {
       lastActivityAt: this.now(),
       focusAgentId: null,
       eggBucket: { tokens: EGG_RATE_LIMIT.burst, lastRefillAt: this.now() },
+      ready: false,
     };
     this.clients.set(ws, conn);
     ws.on('message', (data: RawData) => this.onMessage(ws, conn, data));
@@ -156,14 +169,17 @@ export class OfficeHub {
           const replay = this.ring.replaySince(msg.lastSeq);
           if (replay !== null) {
             for (const entry of replay) this.send(ws, { t: 'delta', seq: entry.seq, ops: entry.ops });
+            conn.ready = true;
             return;
           }
         }
         this.sendSnapshot(ws);
+        conn.ready = true;
         return;
       }
       case 'resync': {
         this.sendSnapshot(ws);
+        conn.ready = true;
         return;
       }
       case 'focus': {
@@ -195,7 +211,7 @@ export class OfficeHub {
 
   broadcastEvent(kind: EventKind, extra: Record<string, unknown> = {}): void {
     const frame: ServerFrame = { t: 'event', kind, ...extra };
-    for (const ws of this.clients.keys()) this.send(ws, frame);
+    for (const [ws, conn] of this.clients) if (conn.ready) this.send(ws, frame);
   }
 
   /** Recomputes deltas since the last call and broadcasts them. Call once per server tick. */
@@ -204,7 +220,7 @@ export class OfficeHub {
     if (ops.length === 0) return ops;
     const entry = this.ring.push(ops);
     const frame: ServerFrame = { t: 'delta', seq: entry.seq, ops };
-    for (const ws of this.clients.keys()) this.send(ws, frame);
+    for (const [ws, conn] of this.clients) if (conn.ready) this.send(ws, frame);
     return ops;
   }
 
@@ -212,7 +228,7 @@ export class OfficeHub {
   publishAgentAnim(agentId: string, clip: string): void {
     const entry = this.ring.push([{ op: 'agent_anim', agentId, clip }]);
     const frame: ServerFrame = { t: 'delta', seq: entry.seq, ops: entry.ops };
-    for (const ws of this.clients.keys()) this.send(ws, frame);
+    for (const [ws, conn] of this.clients) if (conn.ready) this.send(ws, frame);
   }
 
   /** Closes any connection that has sent nothing for `WS_IDLE_TIMEOUT_MS`. */

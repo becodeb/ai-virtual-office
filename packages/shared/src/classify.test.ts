@@ -123,3 +123,34 @@ describe('pickSkin', () => {
     expect(choice.skin).toBe(FALLBACK_SKIN);
   });
 });
+
+describe('a delegated Task is classified from its description', () => {
+  /**
+   * A non-Haiku subagent has no tool and no path - the task description is the
+   * only signal it will ever carry. Before this rule every one of them arrived
+   * as a faceless Temp during the single most visible thing it does: walking
+   * across the floor to its parent's desk.
+   */
+  const task = (promptText: string, model = 'claude-opus-5') =>
+    classify({ event: 'PreToolUse', tool: 'Task', model, promptText });
+
+  it('routes a security task to Ninja', () => {
+    expect(task('audit the auth secret handling').role).toBe('Ninja');
+  });
+
+  it('routes a planning task to Wizard', () => {
+    expect(task('design the architecture for the delta protocol').role).toBe('Wizard');
+  });
+
+  it('marks text-derived roles as inferred, not exact', () => {
+    expect(task('audit the auth secret handling').confidence).toBe('inferred');
+  });
+
+  it('still prefers the Haiku rule over the description', () => {
+    expect(task('audit the auth secret handling', 'claude-haiku-4-5').role).toBe('Intern');
+  });
+
+  it('falls back to Temp when the description says nothing useful', () => {
+    expect(task('do the needful').role).toBe(FALLBACK_ROLE);
+  });
+});

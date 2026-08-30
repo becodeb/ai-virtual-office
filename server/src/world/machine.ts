@@ -20,7 +20,7 @@
  * (decision 7).
  */
 import type { AgentState, Confidence, HookEventPayload, Role, SkinName } from '@virtual-office/shared';
-import { classify, isTestRunnerShapedCommand, pickSkin, type ClassifierInput } from '@virtual-office/shared';
+import { FALLBACK_ROLE, classify, isTestRunnerShapedCommand, pickSkin, type ClassifierInput } from '@virtual-office/shared';
 import { findPath } from './astar.js';
 import { DeskRegistry } from './desks.js';
 import { DEFAULT_FLOOR_LAYOUT, Grid, type Cell, type FloorLayout, type SeatSocket } from './grid.js';
@@ -243,6 +243,15 @@ function applyClassification(agent: AgentRecord, result: ReturnType<typeof class
   agent.confidence = result.confidence;
   if (result.forcePush) agent.forcePush = true;
 
+  // The fallback role means "this event told us nothing", not "this worker is a
+  // temp". A non-answer must never consume the first-classification exemption
+  // and must never build a streak against a role we already know. Without this,
+  // a session whose first event is an unclassifiable UserPromptSubmit locks
+  // itself to Temp and then needs three more matching events to escape - so it
+  // spends its opening minutes as a faceless grey placeholder while a session
+  // that happened to open with a tool call is correctly dressed immediately.
+  if (result.role === FALLBACK_ROLE) return;
+
   if (!agent.everClassified) {
     agent.everClassified = true;
     agent.classifiedRole = result.role;
@@ -289,6 +298,20 @@ function toClassifierInput(payload: HookEventPayload): ClassifierInput | null {
   }
   if (payload.event === 'UserPromptSubmit') {
     return { event: payload.event, promptText: payload.data.promptSummary };
+  }
+  if (payload.event === 'SubagentStart') {
+    // A subagent's own spawn carries everything the classifier needs - the model
+    // decides Intern, the task text decides the rest. Without this it stays a
+    // grey Temp until it happens to reach for a tool, which is precisely when
+    // its character is most visible: walking across the floor to its desk.
+    // `Task` is the tool that produced it, so the delegation rules key off the
+    // same shape they do for `PreToolUse`.
+    return {
+      event: 'PreToolUse',
+      tool: 'Task',
+      model: payload.data.model,
+      promptText: payload.data.taskSummary,
+    };
   }
   return null;
 }
@@ -532,6 +555,11 @@ function applySubagentStart(world: WorldState, payload: HookEventPayload<'Subage
     layout: world.layout,
   });
   subagent.taskText = payload.data.taskSummary;
+  // Classify from the spawn event itself. A subagent's walk to its parent's
+  // desk is the most-watched thing it ever does, and it should not make that
+  // entrance as a grey placeholder waiting for its first tool call.
+  const subClassification = toClassifierInput(payload);
+  if (subClassification !== null) applyClassification(subagent, classify(subClassification));
   world.agents.set(subagent.agentId, subagent);
 
   const parentDesk = parent?.deskId !== undefined && parent?.deskId !== null ? world.desks.getDesk(parent.deskId) : undefined;

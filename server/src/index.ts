@@ -12,7 +12,11 @@ import { createWorld, reduce } from './world/machine.js';
 import { IdentityStore } from './world/identity.js';
 import { applyP1OnHookEvent, runP1Behaviors } from './p1/index.js';
 
-const PORT = Number(process.env.PORT ?? 8080);
+// Must match the hook's own default in hooks/office-hook.sh and
+// hooks/settings.example.json. If these two ever drift apart, a fresh install
+// posts events into a void: the hook exits 0, the hub stays healthy, and the
+// office simply never fills up with nothing anywhere to indicate why.
+const PORT = Number(process.env.PORT ?? 8787);
 const HOST = process.env.HOST ?? '0.0.0.0';
 const TICK_RATE_HZ = 10;
 const TICK_INTERVAL_MS = 1000 / TICK_RATE_HZ;
@@ -126,6 +130,22 @@ function shutdown(): void {
 }
 process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
+
+// A busy port is an ordinary local condition, not a crash. Say which port and
+// how to move, rather than emitting a raw unhandled 'error' stack trace.
+server.on('error', (error: NodeJS.ErrnoException) => {
+  if (error.code === 'EADDRINUSE') {
+    // eslint-disable-next-line no-console
+    console.error(
+      `[office] port ${PORT} is already in use. Set PORT to something free, and point the ` +
+        `hooks at it with OFFICE_HUB_URL=http://<host>:<port>.`,
+    );
+  } else {
+    // eslint-disable-next-line no-console
+    console.error(`[office] could not start: ${error.message}`);
+  }
+  process.exit(1);
+});
 
 server.listen(PORT, HOST, () => {
   // eslint-disable-next-line no-console

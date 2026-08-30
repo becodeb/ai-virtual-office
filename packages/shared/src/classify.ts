@@ -106,6 +106,19 @@ export function classify(input: ClassifierInput): RoleAssignment {
   if (tool === 'Task' && /haiku/i.test(input.model ?? '')) {
     return assignment('Intern', 'exact');
   }
+  // Rule 6b: a delegated Task that is not Haiku-class carries no tool and no
+  // path - its description is the only signal it will ever have. Read the role
+  // out of that text, because a subagent's walk across the floor to its
+  // parent's desk is the most-watched thing it does, and arriving as a faceless
+  // Temp wastes it. Confidence is `inferred`: this is text, not a tool call.
+  if (tool === 'Task') {
+    const task = input.promptText ?? '';
+    if (RE_SECRET.test(task)) return assignment('Ninja', 'inferred');
+    if (RE_MODEL_TOUCH.test(task)) return assignment('Witch', 'inferred');
+    if (RE_DESTRUCTIVE_INTENT.test(task)) return assignment('Viking', 'inferred');
+    if (RE_TEST_RUNNER.test(task)) return assignment('Medic', 'inferred');
+    if (RE_PLANNING.test(task)) return assignment('Wizard', 'inferred');
+  }
   // Rule 7: any path/query touching auth/secrets/security -> Ninja.
   if (RE_SECRET.test(pathQueryHaystack(input))) {
     return assignment('Ninja', 'exact');
