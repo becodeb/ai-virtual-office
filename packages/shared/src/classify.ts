@@ -49,6 +49,11 @@ export interface SkinChoice {
 const RE_GIT_PUSH = /\bgit\s+push\b/;
 const RE_FORCE_PUSH = /--force\b/;
 const RE_TEST_RUNNER = /\b(vitest|jest|pytest|go test|cargo test|(npm|pnpm|yarn) test)\b/;
+
+/** Whether `command` has the shape of a known test-runner invocation (rule 2). Exported for the P1 ship-it detector, which needs the same shape check but reacts to `PostToolUse`'s exit code, not `PreToolUse`. */
+export function isTestRunnerShapedCommand(command: string): boolean {
+  return RE_TEST_RUNNER.test(command);
+}
 const RE_BUILD = /\b(build|compile|bundle|tsc|vite build|webpack)\b/;
 const RE_INSTALL = /\b(docker|make|apt|brew|(npm|pnpm|yarn) (i|add|install))\b/;
 const RE_SECRET = /(auth|secret|token|credential|\.env|security)/i;

@@ -4,10 +4,18 @@
   "elevatorCell": [0, 9],
   "fireExitCell": [23, 9],
   "kitchen": {
-    "coffeeMachineCell": [2, 16]
+    "coffeeMachineCell": [2, 15],
+    "standCell": [3, 15]
   },
   "meetingRoom": {
     "screenCell": [2, 1]
+  },
+  "bear": {
+    "cell": [15, 2],
+    "standCell": [15, 3]
+  },
+  "architect": {
+    "cell": [21, 15]
   },
   "desks": [
     { "id": "D1", "cell": [3, 3], "seatCell": [3, 4], "facing": "north" },

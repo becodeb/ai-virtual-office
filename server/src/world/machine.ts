@@ -20,7 +20,7 @@
  * (decision 7).
  */
 import type { AgentState, Confidence, HookEventPayload, Role, SkinName } from '@virtual-office/shared';
-import { classify, pickSkin, type ClassifierInput } from '@virtual-office/shared';
+import { classify, isTestRunnerShapedCommand, pickSkin, type ClassifierInput } from '@virtual-office/shared';
 import { findPath } from './astar.js';
 import { DeskRegistry } from './desks.js';
 import { DEFAULT_FLOOR_LAYOUT, Grid, type Cell, type FloorLayout, type SeatSocket } from './grid.js';
@@ -50,6 +50,11 @@ export const ROLE_HYSTERESIS_STREAK = 3;
  * this constant is the same kind of deliberately configurable default).
  */
 export const AGENT_MOVE_CELLS_PER_SEC = 2;
+/** P1 coffee runs: how long an agent must sit idle before it wanders off for coffee, and the minimum gap between runs. */
+export const COFFEE_IDLE_THRESHOLD_MS = 45_000;
+/** P1 Architect: how long the "no" head-shake reaction plays before reverting to folded arms. */
+export const ARCHITECT_REACTION_MS = 4_000;
+export const ARCHITECT_NPC_ID = 'npc-architect';
 
 // --- Types -------------------------------------------------------------
 
@@ -60,7 +65,11 @@ export type ArrivalAction =
   | 'arriveAtSecondaryDesk'
   | 'arriveAtParentForReport'
   | 'arriveAtLoungeForRest'
-  | 'completeZombieLap';
+  | 'completeZombieLap'
+  | 'arriveAtCoffeeMachine'
+  | 'returnFromCoffee'
+  | 'arriveAtBear'
+  | 'returnFromBear';
 
 export interface Movement {
   cells: Cell[];
@@ -105,6 +114,30 @@ export interface AgentRecord {
   bashFailureStreak: number;
   /** P1 teddy-bear debugging: this agent owes the bear a bow on its next success. */
   owesBow: boolean;
+  /** P1 teddy-bear debugging: currently visiting the bear (suppresses re-triggering while already there). */
+  atBear: boolean;
+  /** Bash `toolUseId` -> command text, so `PostToolUse` (which carries no command) can still be correlated for ship-it/bear detection. */
+  pendingBashCommands: Map<string, string>;
+  /** P1 ship-it: the outcome of this agent's most recent test-runner-shaped Bash command, so a pass is never celebrated on a fail-then-retry. */
+  lastTestRunOutcome: 'pass' | 'fail' | null;
+  /** P1 coffee runs: currently walking to/from the kitchen. */
+  onCoffeeRun: boolean;
+  /** P1 coffee runs: when this agent last went for coffee, to space runs out. */
+  lastCoffeeRunAt: number | null;
+  /** P1 zombie hour: the role's skin/badge before the Revenant swap, restored if the chain is cancelled. */
+  preZombieSkin: SkinName | null;
+  preZombieBadge: string | null;
+}
+
+/** P1 The Architect: a permanent, deskless corner-office NPC (not part of the session state machine). */
+export interface NpcRecord {
+  npcId: string;
+  kind: 'architect';
+  cell: Cell;
+  position: { x: number; y: number; z: number };
+  facingRad: number;
+  clip: 'Idle_FoldArms_Loop' | 'Idle_No_Loop';
+  clipUntil: number | null;
 }
 
 export interface WorldState {
@@ -112,6 +145,7 @@ export interface WorldState {
   grid: Grid;
   desks: DeskRegistry;
   agents: Map<string, AgentRecord>;
+  npcs: Map<string, NpcRecord>;
 }
 
 export type MachineEvent = { kind: 'hook'; payload: HookEventPayload } | { kind: 'tick' };
@@ -122,10 +156,33 @@ export type MachineSideEffect =
   | { kind: 'zombified'; agentId: string }
   | { kind: 'bashFailureStreak'; agentId: string; streak: number }
   | { kind: 'bashSuccessAfterStreak'; agentId: string }
-  | { kind: 'shipIt'; agentId: string; forcePush: boolean };
+  | { kind: 'shipIt'; agentId: string }
+  | { kind: 'coffeeSipped'; agentId: string };
+
+function createArchitectNpc(layout: FloorLayout): NpcRecord {
+  return {
+    npcId: ARCHITECT_NPC_ID,
+    kind: 'architect',
+    cell: layout.architectCell,
+    position: { x: layout.architectCell[0] + 0.5, y: 0, z: layout.architectCell[1] + 0.5 },
+    facingRad: 0,
+    clip: 'Idle_FoldArms_Loop',
+    clipUntil: null,
+  };
+}
+
+/** role-classification spec, decision 6: a diff signal (`any`/`// TODO`/>500-line file) briefly plays the Architect's head-shake. */
+export function triggerArchitectReaction(world: WorldState, now: number): void {
+  const architect = world.npcs.get(ARCHITECT_NPC_ID);
+  if (architect === undefined) return;
+  architect.clip = 'Idle_No_Loop';
+  architect.clipUntil = now + ARCHITECT_REACTION_MS;
+}
 
 export function createWorld(layout: FloorLayout = DEFAULT_FLOOR_LAYOUT, grid: Grid = Grid.fromLayout(layout)): WorldState {
-  return { layout, grid, desks: new DeskRegistry(layout, grid), agents: new Map() };
+  const npcs = new Map<string, NpcRecord>();
+  npcs.set(ARCHITECT_NPC_ID, createArchitectNpc(layout));
+  return { layout, grid, desks: new DeskRegistry(layout, grid), agents: new Map(), npcs };
 }
 
 function seatPosition(seat: SeatSocket): { cell: Cell; position: AgentRecord['position']; facingRad: number } {
@@ -249,6 +306,13 @@ function wakeIfAsleep(world: WorldState, agent: AgentRecord, now: number): void 
   agent.state = 'SEATED_IDLE';
   agent.lastActivityAt = now;
 
+  if (agent.preZombieSkin !== null) {
+    agent.skin = agent.preZombieSkin;
+    agent.badge = agent.preZombieBadge ?? agent.badge;
+    agent.preZombieSkin = null;
+    agent.preZombieBadge = null;
+  }
+
   if (agent.deskId === null) {
     const desk = world.desks.tryAllocate(agent.agentId);
     if (desk !== null) {
@@ -304,6 +368,13 @@ function newAgentRecord(opts: {
     forcePush: false,
     bashFailureStreak: 0,
     owesBow: false,
+    atBear: false,
+    pendingBashCommands: new Map(),
+    lastTestRunOutcome: null,
+    onCoffeeRun: false,
+    lastCoffeeRunAt: null,
+    preZombieSkin: null,
+    preZombieBadge: null,
   };
 }
 
@@ -376,7 +447,29 @@ function applyPreToolUse(world: WorldState, payload: HookEventPayload<'PreToolUs
     agent.state = 'DELEGATING';
     agent.bubbleUntil = now + BUBBLE_MS;
   }
+
+  // Remember the Bash command text keyed by toolUseId: PostToolUse carries no
+  // command, but ship-it detection and the teddy-bear streak both need it.
+  if (payload.data.tool === 'Bash' && 'command' in payload.data.input) {
+    agent.pendingBashCommands.set(payload.data.toolUseId, payload.data.input.command);
+  }
   return [];
+}
+
+/** P1 teddy-bear debugging: sends `agent` to explain itself to the bear (creative brief). */
+function sendAgentToBear(world: WorldState, agent: AgentRecord, now: number): void {
+  agent.atBear = true;
+  agent.state = 'WALKING';
+  agent.movement = planMovement(world.grid, agent.cell, world.layout.bearStandCell, 'arriveAtBear', now);
+}
+
+/** P1 teddy-bear debugging: sends `agent` back from the bear to its desk after bowing. */
+function sendAgentBackFromBear(world: WorldState, agent: AgentRecord, now: number): void {
+  agent.atBear = false;
+  const desk = agent.deskId !== null ? world.desks.getDesk(agent.deskId) : undefined;
+  const target = desk?.seat.standCell ?? world.layout.elevatorCell;
+  agent.state = 'WALKING';
+  agent.movement = planMovement(world.grid, agent.cell, target, 'returnFromBear', now);
 }
 
 function applyPostToolUse(payload: HookEventPayload<'PostToolUse'>, world: WorldState, now: number): MachineSideEffect[] {
@@ -388,16 +481,30 @@ function applyPostToolUse(payload: HookEventPayload<'PostToolUse'>, world: World
 
   const effects: MachineSideEffect[] = [];
   if (payload.data.tool === 'Bash') {
+    const command = agent.pendingBashCommands.get(payload.data.toolUseId) ?? '';
+    agent.pendingBashCommands.delete(payload.data.toolUseId);
+    const isTestRunner = isTestRunnerShapedCommand(command);
+
     if (payload.data.ok) {
       if (agent.owesBow) {
         agent.owesBow = false;
         effects.push({ kind: 'bashSuccessAfterStreak', agentId: agent.agentId });
+        sendAgentBackFromBear(world, agent, now);
       }
       agent.bashFailureStreak = 0;
+      // Ship-it: a real pass, never a fail-then-retry (decision 5 / creative brief).
+      if (isTestRunner) {
+        if (agent.lastTestRunOutcome !== 'fail') effects.push({ kind: 'shipIt', agentId: agent.agentId });
+        agent.lastTestRunOutcome = 'pass';
+      }
     } else {
       agent.bashFailureStreak += 1;
       effects.push({ kind: 'bashFailureStreak', agentId: agent.agentId, streak: agent.bashFailureStreak });
-      if (agent.bashFailureStreak >= 3) agent.owesBow = true;
+      if (agent.bashFailureStreak >= 3 && !agent.atBear) {
+        agent.owesBow = true;
+        sendAgentToBear(world, agent, now);
+      }
+      if (isTestRunner) agent.lastTestRunOutcome = 'fail';
     }
   }
   return effects;
@@ -552,8 +659,38 @@ function finishMovement(world: WorldState, agent: AgentRecord, now: number, effe
       despawnAgent(world, agent, now);
       break;
     }
+    case 'arriveAtCoffeeMachine': {
+      agent.cell = finalCell;
+      effects.push({ kind: 'coffeeSipped', agentId: agent.agentId });
+      const desk = agent.deskId !== null ? world.desks.getDesk(agent.deskId) : undefined;
+      const target = desk?.seat.standCell ?? world.layout.elevatorCell;
+      agent.movement = planMovement(world.grid, agent.cell, target, 'returnFromCoffee', now);
+      break;
+    }
+    case 'returnFromCoffee': {
+      const desk = agent.deskId !== null ? world.desks.getDesk(agent.deskId) : undefined;
+      if (desk !== undefined) settleAt(agent, seatPosition(desk.seat));
+      agent.state = 'SEATED_IDLE';
+      agent.lastActivityAt = now;
+      agent.onCoffeeRun = false;
+      break;
+    }
+    case 'arriveAtBear': {
+      agent.cell = finalCell;
+      // Closest available state to "standing somewhere that isn't its own
+      // desk, idling" — the client is expected to render Idle_Talking_Loop
+      // for an agent flagged `atBear` rather than the ordinary lounge idle.
+      agent.state = 'LOUNGING';
+      break;
+    }
+    case 'returnFromBear': {
+      const desk = agent.deskId !== null ? world.desks.getDesk(agent.deskId) : undefined;
+      if (desk !== undefined) settleAt(agent, seatPosition(desk.seat));
+      agent.state = 'SEATED_IDLE';
+      agent.lastActivityAt = now;
+      break;
+    }
   }
-  void effects;
 }
 
 /** Sends the head-of-queue agent walking to a just-freed desk (hot-desk handoff, design.md §2). */
@@ -610,6 +747,22 @@ function tickAgent(world: WorldState, agent: AgentRecord, now: number, effects: 
     despawnAgent(world, agent, now);
   }
 
+  // P1 coffee runs: an agent idle long enough (and not already out for one) wanders to the kitchen and back.
+  if (
+    agent.state === 'SEATED_IDLE' &&
+    !agent.isSubagent &&
+    !agent.onCoffeeRun &&
+    !agent.atBear &&
+    agent.deskId !== null &&
+    now - agent.lastActivityAt >= COFFEE_IDLE_THRESHOLD_MS &&
+    (agent.lastCoffeeRunAt === null || now - agent.lastCoffeeRunAt >= COFFEE_IDLE_THRESHOLD_MS)
+  ) {
+    agent.onCoffeeRun = true;
+    agent.lastCoffeeRunAt = now;
+    agent.state = 'WALKING';
+    agent.movement = planMovement(world.grid, agent.cell, world.layout.kitchenStandCell, 'arriveAtCoffeeMachine', now);
+  }
+
   // Heartbeat timeout chain.
   const isTimeoutEligible = agent.state !== 'SLEEPING' && agent.state !== 'ZOMBIE' && agent.state !== 'DESPAWNING';
   if (isTimeoutEligible && now - agent.lastEventAt >= HEARTBEAT_TIMEOUT_MS) {
@@ -620,6 +773,14 @@ function tickAgent(world: WorldState, agent: AgentRecord, now: number, effects: 
   if (agent.state === 'SLEEPING' && agent.sleepAt !== null && now - agent.sleepAt >= ZOMBIE_AFTER_MS) {
     agent.state = 'ZOMBIE';
     agent.zombieAt = now;
+    // Creative brief: "it turns, gets the Revenant skin". The pre-zombie
+    // choice is preserved so decision 7's cancellation-before-DESPAWNING
+    // restores the original look rather than leaving it stuck as a zombie.
+    agent.preZombieSkin = agent.skin;
+    agent.preZombieBadge = agent.badge;
+    const revenant = pickSkin('Revenant', agent.identityKey, agent.machineId);
+    agent.skin = revenant.skin;
+    agent.badge = revenant.badge;
     if (agent.deskId !== null) {
       const freedDeskId = agent.deskId;
       const result = world.desks.release(freedDeskId);
@@ -662,6 +823,14 @@ function tickWorld(world: WorldState, now: number): MachineSideEffect[] {
     if (result === 'remove') toRemove.push(agent.agentId);
   }
   for (const id of toRemove) world.agents.delete(id);
+
+  for (const npc of world.npcs.values()) {
+    if (npc.clipUntil !== null && now >= npc.clipUntil) {
+      npc.clip = 'Idle_FoldArms_Loop';
+      npc.clipUntil = null;
+    }
+  }
+
   return effects;
 }
 

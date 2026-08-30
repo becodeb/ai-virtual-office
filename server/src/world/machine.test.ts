@@ -4,6 +4,7 @@ import {
   createWorld,
   effectiveRole,
   reduce,
+  triggerArchitectReaction,
   HEARTBEAT_TIMEOUT_MS,
   ZOMBIE_AFTER_MS,
   ZOMBIE_LAP_MS,
@@ -11,6 +12,9 @@ import {
   IDLE_AFTER_MS,
   BUBBLE_MS,
   SUBAGENT_LOUNGE_REST_MS,
+  COFFEE_IDLE_THRESHOLD_MS,
+  ARCHITECT_REACTION_MS,
+  ARCHITECT_NPC_ID,
   type WorldState,
 } from './machine.js';
 
@@ -431,5 +435,112 @@ describe('machine — teddy-bear debugging streak tracking (P1 hook surface)', (
     expect(world.agents.get('s1')!.bashFailureStreak).toBe(0);
     expect(world.agents.get('s1')!.owesBow).toBe(false);
     expect(successEffects.some((e) => e.kind === 'bashSuccessAfterStreak')).toBe(true);
+  });
+});
+
+describe('machine — P1 coffee runs', () => {
+  it('an idle agent wanders to the kitchen and back, emitting coffeeSipped on arrival', () => {
+    const world = createWorld();
+    hook(world, sessionStart('s1', T0), T0);
+    tickUntil(world, T0, () => world.agents.get('s1')!.state !== 'WALKING');
+    const agent = world.agents.get('s1')!;
+    agent.state = 'SEATED_IDLE';
+    agent.lastActivityAt = T0;
+
+    let sawCoffeeSipped = false;
+    let now = T0;
+    const end = T0 + COFFEE_IDLE_THRESHOLD_MS + 60_000;
+    while (now < end) {
+      now += 250;
+      const effects = tick(world, now);
+      if (effects.some((e) => e.kind === 'coffeeSipped')) sawCoffeeSipped = true;
+      if (sawCoffeeSipped && world.agents.get('s1')!.state === 'SEATED_IDLE' && !world.agents.get('s1')!.onCoffeeRun) break;
+    }
+
+    expect(sawCoffeeSipped).toBe(true);
+    expect(world.agents.get('s1')!.state).toBe('SEATED_IDLE');
+    expect(world.agents.get('s1')!.onCoffeeRun).toBe(false);
+  });
+});
+
+describe('machine — P1 teddy-bear debugging (full walk + bow)', () => {
+  it('walks to the bear on the 3rd consecutive failure and bows back on the next success', () => {
+    const world = createWorld();
+    hook(world, sessionStart('s1', T0), T0);
+    tickUntil(world, T0, () => world.agents.get('s1')!.state !== 'WALKING');
+
+    hook(world, bash('s1', T0 + 100, 'pnpm build'), T0 + 100);
+    hook(world, postBash('s1', T0 + 110, false, 1), T0 + 110);
+    hook(world, bash('s1', T0 + 200, 'pnpm build'), T0 + 200);
+    hook(world, postBash('s1', T0 + 210, false, 1), T0 + 210);
+    hook(world, bash('s1', T0 + 300, 'pnpm build'), T0 + 300);
+    hook(world, postBash('s1', T0 + 310, false, 1), T0 + 310);
+
+    expect(world.agents.get('s1')!.atBear).toBe(true);
+    expect(world.agents.get('s1')!.state).toBe('WALKING');
+
+    const now = tickUntil(world, T0 + 310, () => world.agents.get('s1')!.state === 'LOUNGING');
+    expect(world.agents.get('s1')!.atBear).toBe(true);
+
+    hook(world, bash('s1', now + 100, 'pnpm build'), now + 100);
+    const effects = hook(world, postBash('s1', now + 110, true, 0), now + 110);
+    expect(effects.some((e) => e.kind === 'bashSuccessAfterStreak')).toBe(true);
+    expect(world.agents.get('s1')!.atBear).toBe(false);
+    expect(world.agents.get('s1')!.state).toBe('WALKING'); // walking back to its desk to bow off
+
+    tickUntil(world, now + 110, () => world.agents.get('s1')!.state !== 'WALKING');
+    expect(world.agents.get('s1')!.state).toBe('SEATED_IDLE');
+  });
+});
+
+describe('machine — P1 ship-it detection (never on retry)', () => {
+  it('does not celebrate a pass that immediately follows a failure of the same shape', () => {
+    const world = createWorld();
+    hook(world, sessionStart('s1', T0), T0);
+    tickUntil(world, T0, () => world.agents.get('s1')!.state !== 'WALKING');
+
+    hook(world, bash('s1', T0 + 100, 'pnpm test'), T0 + 100);
+    hook(world, postBash('s1', T0 + 110, false, 1), T0 + 110);
+
+    hook(world, bash('s1', T0 + 200, 'pnpm test'), T0 + 200);
+    const retryEffects = hook(world, postBash('s1', T0 + 210, true, 0), T0 + 210);
+    expect(retryEffects.some((e) => e.kind === 'shipIt')).toBe(false);
+  });
+
+  it('celebrates a fresh test-runner pass that was not a retry-after-fail', () => {
+    const world = createWorld();
+    hook(world, sessionStart('s1', T0), T0);
+    tickUntil(world, T0, () => world.agents.get('s1')!.state !== 'WALKING');
+
+    hook(world, bash('s1', T0 + 100, 'pnpm test'), T0 + 100);
+    const effects = hook(world, postBash('s1', T0 + 110, true, 0), T0 + 110);
+    expect(effects.some((e) => e.kind === 'shipIt')).toBe(true);
+  });
+
+  it('does not celebrate a non-test-runner Bash success', () => {
+    const world = createWorld();
+    hook(world, sessionStart('s1', T0), T0);
+    tickUntil(world, T0, () => world.agents.get('s1')!.state !== 'WALKING');
+
+    hook(world, bash('s1', T0 + 100, 'ls -la'), T0 + 100);
+    const effects = hook(world, postBash('s1', T0 + 110, true, 0), T0 + 110);
+    expect(effects.some((e) => e.kind === 'shipIt')).toBe(false);
+  });
+});
+
+describe('machine — P1 The Architect NPC', () => {
+  it('defaults to Idle_FoldArms_Loop and reverts after triggerArchitectReaction elapses', () => {
+    const world = createWorld();
+    const architect = world.npcs.get(ARCHITECT_NPC_ID)!;
+    expect(architect.clip).toBe('Idle_FoldArms_Loop');
+
+    triggerArchitectReaction(world, T0);
+    expect(world.npcs.get(ARCHITECT_NPC_ID)!.clip).toBe('Idle_No_Loop');
+
+    tick(world, T0 + ARCHITECT_REACTION_MS - 1);
+    expect(world.npcs.get(ARCHITECT_NPC_ID)!.clip).toBe('Idle_No_Loop');
+
+    tick(world, T0 + ARCHITECT_REACTION_MS + 1);
+    expect(world.npcs.get(ARCHITECT_NPC_ID)!.clip).toBe('Idle_FoldArms_Loop');
   });
 });

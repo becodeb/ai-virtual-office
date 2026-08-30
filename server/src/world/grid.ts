@@ -56,7 +56,15 @@ export interface FloorLayout {
   elevatorCell: Cell;
   fireExitCell: Cell;
   kitchenCoffeeMachineCell: Cell;
+  /** A free cell next to the coffee machine — the actual A* pathing target (the machine's own cell is blocked). */
+  kitchenStandCell: Cell;
   meetingRoomScreenCell: Cell;
+  /** The teddy bear's own cell (P1 teddy-bear debugging), blocked like any other prop. */
+  bearCell: Cell;
+  /** A free cell next to the bear — the actual A* pathing target. */
+  bearStandCell: Cell;
+  /** The Architect NPC's permanent corner-office cell (P1), blocked like any other static fixture. */
+  architectCell: Cell;
   desks: DeskLayout[];
   loungeSeats: SeatSocket[];
 }
@@ -81,8 +89,10 @@ interface RawFloor {
   height: number;
   elevatorCell: [number, number];
   fireExitCell: [number, number];
-  kitchen: { coffeeMachineCell: [number, number] };
+  kitchen: { coffeeMachineCell: [number, number]; standCell: [number, number] };
   meetingRoom: { screenCell: [number, number] };
+  bear: { cell: [number, number]; standCell: [number, number] };
+  architect: { cell: [number, number] };
   desks: RawDesk[];
   lounge: { seats: RawSeat[] };
 }
@@ -108,7 +118,11 @@ export function parseFloorLayout(raw: RawFloor): FloorLayout {
     elevatorCell: raw.elevatorCell,
     fireExitCell: raw.fireExitCell,
     kitchenCoffeeMachineCell: raw.kitchen.coffeeMachineCell,
+    kitchenStandCell: raw.kitchen.standCell,
     meetingRoomScreenCell: raw.meetingRoom.screenCell,
+    bearCell: raw.bear.cell,
+    bearStandCell: raw.bear.standCell,
+    architectCell: raw.architect.cell,
     desks: raw.desks.map((d) => ({
       id: d.id,
       cell: d.cell,
@@ -168,6 +182,8 @@ export class Grid {
     }
     grid.set(layout.kitchenCoffeeMachineCell[0], layout.kitchenCoffeeMachineCell[1], CELL_BLOCKED);
     grid.set(layout.meetingRoomScreenCell[0], layout.meetingRoomScreenCell[1], CELL_BLOCKED);
+    grid.set(layout.bearCell[0], layout.bearCell[1], CELL_BLOCKED);
+    grid.set(layout.architectCell[0], layout.architectCell[1], CELL_BLOCKED);
     return grid;
   }
 

@@ -54,7 +54,8 @@ export interface NormalizeContext {
   now: number;
 }
 
-const SUPPORTED_EVENTS: ReadonlySet<string> = new Set<HookEventName>([
+/** The eight hook events `/events` accepts, from either body shape. */
+export const SUPPORTED_EVENTS: ReadonlySet<string> = new Set<HookEventName>([
   'SessionStart',
   'UserPromptSubmit',
   'PreToolUse',

@@ -55,7 +55,7 @@ Estimate is driven by five greenfield workspaces (`hooks/`, `server/`, `client/`
 
 ## Phase 2: Server / Hub
 
-- [ ] 2.1 Scaffold `server/` (`package.json`, `src/index.ts`: HTTP `POST /events` + `GET /healthz` + WS upgrade on one port, 10 Hz tick).
+- [x] 2.1 Scaffold `server/` (`package.json`, `src/index.ts`: HTTP `POST /events` + `GET /healthz` + WS upgrade on one port, 10 Hz tick).
 - [x] 2.2 Implement `server/src/world/grid.ts`: `Uint8Array` occupancy (0 free, 1 static, 2 seat), built once from `server/src/world/floor.json` (default 24×18, 12 desks).
 - [x] 2.3 Implement `server/src/world/astar.ts`: 8-connected, no corner-cutting, octile heuristic `h = (dx+dy) + (√2-2)·min(dx,dy)`, binary-heap open set, deterministic tie-break (lower `h`, then lower cell index), string-pulled path smoothing.
 - [x] 2.4 RED tests `server/src/world/astar.test.ts`: hand-computed octile costs, no corner-cutting through a diagonal wall gap, `null` on unreachable, byte-identical determinism across repeated runs (office-simulation spec: pathfinding + unreachable scenarios).
@@ -68,16 +68,16 @@ Estimate is driven by five greenfield workspaces (`hooks/`, `server/`, `client/`
 - [x] 2.11 RED tests `machine.test.ts`: every transition row in the table; full `15min → SLEEPING → 2min → ZOMBIE → lap(~20s) → 3s dissolve → DESPAWNING` chain (decisions 7 & 10 — 2 min, not design's 5); desk released at `ZOMBIE`, not at removal; any event before `DESPAWNING` cancels the chain back to `SEATED_IDLE`.
 - [x] 2.12 RED test: hysteresis — three consecutive same-role classifications required before the hub flips an agent's displayed role; one stray `Read` mid-build does not flip Builder→Detective.
 - [x] 2.13 RED test: `ZOMBIE` state overrides displayed role to Revenant regardless of prior classification (role-classification spec, heartbeat-timeout override).
-- [ ] 2.14 Implement `server/src/net/ring.ts`: 256-entry delta replay ring keyed by `seq`.
-- [ ] 2.15 Implement `server/src/net/hub.ts`: WS upgrade, subprotocol/`hello.p` version check (`office.v1`, mismatch → `protocol_mismatch` + close 1008), snapshot-then-delta send order, reconnect resync (`lastSeq` in ring → replay; not in ring → full snapshot), `focus`/`egg`(rate-limited 3/10s, refill 1/3s)/`ping` handling, 60s idle close.
-- [ ] 2.16 RED tests: new client receives snapshot before any delta; reconnect triggers fresh snapshot; `lastSeq` outside ring forces full snapshot, not a partial replay (world-state-hub spec + design §3 reconnect scenarios).
-- [ ] 2.17 Implement `/events` payload validation: schema check against `packages/shared`, 16KB body cap, reject unknown `event` values, server-side re-truncation of all text fields (design threat-matrix row: untrusted network input).
-- [ ] 2.18 RED tests: oversized body, unknown event, missing `sessionId`, over-long text field each rejected without mutating existing world state.
-- [ ] 2.19 [P1] Implement coffee-run behavior: idle-triggered walk to kitchen prop, increment persisted coffee counter on `identities`.
-- [ ] 2.20 [P1] Implement teddy-bear debugging: 3 consecutive failing `Bash` exits → walk to `bear` prop, `Idle_Talking_Loop`; next success → bow animation state.
-- [ ] 2.21 [P1] Implement ship-it detection: command shape matches a known test-runner regex and exits 0 → broadcast `event:{kind:"confetti"}` and `dance_party`, flagged `inferred` in the payload per decision 5 (never on retry).
-- [ ] 2.22 [P1] Implement zombie-hour NPC behavior already covered by 2.11's state chain — add the Revenant skin swap and one-lap walk target computation (perimeter path).
-- [ ] 2.23 [P1] Add The Architect NPC: static desk-less agent record, `Idle_FoldArms_Loop` default; on a diff event carrying `any`/`// TODO`/>500-line-file signal (surfaced via classifier metadata), transitions briefly to `Idle_No_Loop`.
+- [x] 2.14 Implement `server/src/net/ring.ts`: 256-entry delta replay ring keyed by `seq`.
+- [x] 2.15 Implement `server/src/net/hub.ts`: WS upgrade, subprotocol/`hello.p` version check (`office.v1`, mismatch → `protocol_mismatch` + close 1008), snapshot-then-delta send order, reconnect resync (`lastSeq` in ring → replay; not in ring → full snapshot), `focus`/`egg`(rate-limited 3/10s, refill 1/3s)/`ping` handling, 60s idle close.
+- [x] 2.16 RED tests: new client receives snapshot before any delta; reconnect triggers fresh snapshot; `lastSeq` outside ring forces full snapshot, not a partial replay (world-state-hub spec + design §3 reconnect scenarios).
+- [x] 2.17 Implement `/events` payload validation: schema check against `packages/shared`, 16KB body cap, reject unknown `event` values, server-side re-truncation of all text fields (design threat-matrix row: untrusted network input). Extended per an in-flight cross-phase contract with Phase 3 (hooks): `/events` also accepts the raw, unnormalised Claude Code envelope the primary `sh` hook pipes straight through (no `v` field), normalising it server-side via `@virtual-office/shared/normalize` before validation.
+- [x] 2.18 RED tests: oversized body, unknown event, missing `sessionId`, over-long text field each rejected without mutating existing world state.
+- [x] 2.19 [P1] Implement coffee-run behavior: idle-triggered walk to kitchen prop, increment persisted coffee counter on `identities`.
+- [x] 2.20 [P1] Implement teddy-bear debugging: 3 consecutive failing `Bash` exits → walk to `bear` prop, `Idle_Talking_Loop`; next success → bow animation state. Deviation: no dedicated "bow" clip exists among the 84 clips in `animations.glb`; uses `Yes` (the closest available affirmative/nod gesture) via a new `agent_anim` delta.
+- [x] 2.21 [P1] Implement ship-it detection: command shape matches a known test-runner regex and exits 0 → broadcast `event:{kind:"confetti"}` and `dance_party`, flagged `inferred` in the payload per decision 5 (never on retry).
+- [x] 2.22 [P1] Implement zombie-hour NPC behavior already covered by 2.11's state chain — add the Revenant skin swap and one-lap walk target computation (perimeter path).
+- [x] 2.23 [P1] Add The Architect NPC: static desk-less agent record, `Idle_FoldArms_Loop` default; on a diff event carrying `any`/`// TODO`/>500-line-file signal (surfaced via classifier metadata), transitions briefly to `Idle_No_Loop`. Partial: the NPC, its default clip, and the reaction/reset timer are fully implemented (`server/src/world/machine.ts`'s `triggerArchitectReaction`); the trigger detector (`server/src/p1/index.ts`'s `checkArchitectSignal`) is a documented best-effort heuristic over `PostToolUse.outputSummary`, because the frozen wire contract (Phase 1's `wire.ts`) carries no actual diff content or file line count — a real implementation needs a new hook-populated `data` field, deferred to avoid an unreviewed wire-contract change while Phase 3 builds against it concurrently.
 
 ## Phase 3: Hooks
 
