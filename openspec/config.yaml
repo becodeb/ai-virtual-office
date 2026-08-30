@@ -87,7 +87,7 @@ rules:
   archive:
     - Warn before merging destructive deltas
 
-deploy_convention:
+deploy_convention:  # SUPERSEDED in part — see openspec/research/deploy-environment.md
   source: "sibling repos kodu/docker-compose.prod.yml, trellofake/docker-compose.prod.yml"
   production:
     - No host ports published — `expose` only
