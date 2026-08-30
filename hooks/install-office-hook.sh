@@ -5,7 +5,7 @@
 # machine's session — the hook only ever reads this machine's own hostname.
 set -eu
 
-HUB_URL="${1:-https://office.mastropietro.work.gd}"
+HUB_URL="${1:-https://office.becode.com.ar}"
 DEST="$HOME/.claude"
 mkdir -p "$DEST"
 
