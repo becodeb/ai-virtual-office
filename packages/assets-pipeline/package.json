@@ -4,15 +4,13 @@
   "version": "0.0.0",
   "description": "Offline build-time pipeline: FBX/GLB character skins + UAL1/UAL2 animation packs -> browser-ready GLBs, retargeted onto the shared Quaternius rig.",
   "type": "module",
-  "bin": {
-    "assets-pipeline": "./src/index.ts"
-  },
   "scripts": {
     "build:assets": "tsx src/index.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@virtual-office/shared": "workspace:*",
     "three": "0.180.0"
   },
   "devDependencies": {

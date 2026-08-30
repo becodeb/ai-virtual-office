@@ -17,6 +17,9 @@ importers:
 
   packages/assets-pipeline:
     dependencies:
+      '@virtual-office/shared':
+        specifier: workspace:*
+        version: link:../shared
       three:
         specifier: 0.180.0
         version: 0.180.0
