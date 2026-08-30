@@ -120,3 +120,38 @@ A retarget that leaves pelvis Y constant across all clips is the known failure m
   exported GLBs stay tiny. Materials load as `MeshPhongMaterial` and should be converted to
   `MeshStandardMaterial` (or a toon material) before export.
 - **Kenney office props are already `.glb`** — 140 of them, zero conversion needed.
+
+## Export pipeline — validated
+
+`GLTFExporter` runs headless once `FileReader` is shimmed over `Blob.arrayBuffer()`
+(~15 lines; it is only used to drain a Blob). A full export/reload round-trip preserves
+clip names, track counts, durations and the measured `Body.position` heights exactly.
+
+**All 84 clips** (both libraries, minus the two `A_TPose` references) retarget cleanly in a
+single pass. Because the 52 skins share one rig, they ship as **one 2.8MB `animations.glb`
+that drives every character**. This is the core payload win.
+
+### Two export traps, both measured
+
+1. **`GLTFExporter` explodes a multi-material mesh into one primitive per geometry group.**
+   `Casual_Male` has 6 materials spread over 96 groups, and exports as **96 SkinnedMeshes** —
+   96 draw calls per character. Fix: collapse to a single primitive and bake each material's
+   flat colour into a vertex-colour attribute. Result: **1 mesh, 1 draw call**, and role
+   tinting stays trivial because the colour lives per-vertex on named source slots.
+
+2. **The source geometry is non-indexed and carries unused UVs.** Indexing via
+   `mergeVertices` and deleting the UV attributes (there are no textures) is a large win.
+
+### Measured payload
+
+| Variant | Per character | x52 |
+|---|---|---|
+| Naive export (96 primitives) | 1015 KB | 51.5 MB |
+| Merged, vertex colours, non-indexed | 1180 KB | 59.9 MB |
+| **Merged + indexed + UVs dropped** | **592 KB** | **30.1 MB** |
+
+Indexing cut the vertex count from 19476 to 8796.
+
+**Recommendation:** commit a curated subset of roughly 16 skins (~9.5 MB) plus the shared
+`animations.glb` (2.8 MB) — about **12 MB committed**. The pipeline regenerates any of the
+other 36 on demand from the gitignored raw assets.
