@@ -107,7 +107,12 @@ export function useAgentAnimator(
     play(targetClip, false, fadeDuration);
     currentClipNameRef.current = targetClip;
     return undefined;
-  }, [clips, targetClip]);
+    // `root` belongs here. Rebuilding the clone — which now happens live, every
+    // time an agent is reclassified and changes skin — creates a fresh mixer and
+    // clears the "currently playing" refs. Without `root` in these dependencies
+    // this effect never re-runs, so the new mixer plays nothing at all and the
+    // character snaps to its bind pose: a T-pose, standing in the lounge.
+  }, [root, clips, targetClip]);
 
   useEffect(() => {
     const action = currentActionRef.current;

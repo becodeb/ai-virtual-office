@@ -19,7 +19,7 @@ import type { AgentSnapshot } from '@virtual-office/shared';
 import type { FloorLayout, SeatSocket, Vec3Like } from '../net/floorLayout.js';
 
 /** Mirrors `server/src/world/machine.ts`'s `AGENT_MOVE_CELLS_PER_SEC` (documented there as a cosmetic, non-spec-pinned tuning constant). */
-export const AGENT_MOVE_CELLS_PER_SEC = 2;
+export const AGENT_MOVE_CELLS_PER_SEC = 1.2;
 
 export interface AgentTarget {
   position: Vec3Like;

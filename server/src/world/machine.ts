@@ -44,12 +44,14 @@ export const SUBAGENT_LOUNGE_REST_MS = 15_000;
 /** design.md §7: consecutive same-role classifications required before the hub flips the displayed role. */
 export const ROLE_HYSTERESIS_STREAK = 3;
 /**
- * Cosmetic walking speed used only to estimate server-side arrival timing.
- * Not pinned by any spec or design value (design.md's Open Questions calls
- * the tick rate and `zombieAfterMs` "tuned by watching the thing run" —
- * this constant is the same kind of deliberately configurable default).
+ * Walking speed, in grid cells per second.
+ *
+ * One cell is one world unit and a character stands 0.85 of one, so 2 cells a
+ * second is a 0.85-tall person covering roughly four metres a second at human
+ * scale — a sprint. The walk cycle cannot keep up with that, so the feet skate
+ * across the floor. 1.2 reads as walking.
  */
-export const AGENT_MOVE_CELLS_PER_SEC = 2;
+export const AGENT_MOVE_CELLS_PER_SEC = 1.2;
 /** P1 coffee runs: how long an agent must sit idle before it wanders off for coffee, and the minimum gap between runs. */
 export const COFFEE_IDLE_THRESHOLD_MS = 45_000;
 /** P1 Architect: how long the "no" head-shake reaction plays before reverting to folded arms. */

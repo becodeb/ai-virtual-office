@@ -19,13 +19,17 @@ export const AGENT_STATE_CLIP: Record<AgentState, string> = {
   // Standing at the elevator, about to be assigned a desk.
   SPAWNING: 'Idle_Loop',
   WALKING: 'Walk_Loop',
-  // Decision 4, verbatim: overflow agents "sit on the couches and play Idle_TalkingPhone_Loop".
-  QUEUED: 'Idle_TalkingPhone_Loop',
+  // Decision 4 asks for overflow agents to "sit on the couches and play
+  // Idle_TalkingPhone_Loop" — but that clip is a STANDING animation, and played
+  // on a seat socket it puts the character upright on top of the sofa. Seated
+  // clips are used instead; the intent (waiting around, visibly not working) is
+  // preserved, the pose is not a contradiction.
+  QUEUED: 'Sitting_Talking_Loop',
   // No dedicated "typing" clip exists; Sitting_Talking_Loop is the closest "busy at the desk" loop.
   SEATED_TYPING: 'Sitting_Talking_Loop',
   SEATED_IDLE: 'Sitting_Idle_Loop',
-  // Decision 4's lounge behaviour applies to both overflow queueing and subagent rest.
-  LOUNGING: 'Idle_TalkingPhone_Loop',
+  // Same reason as QUEUED: resting on a couch is a seated pose.
+  LOUNGING: 'Sitting_Idle_Loop',
   // Handoff / speech-bubble gesture.
   DELEGATING: 'Idle_Talking_Loop',
   REPORTING: 'Idle_Talking_Loop',
