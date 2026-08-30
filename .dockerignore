@@ -1,0 +1,24 @@
+# The 267MB of raw FBX/GLB source. The pipeline runs offline and its committed
+# output already lives in client/public/assets, so the build context never needs
+# these — and shipping them would make the context ~15x larger than the image.
+assets/
+
+node_modules
+**/node_modules
+**/dist
+**/build
+.git
+.github
+.vite
+
+openspec/
+.atl/
+.engram/
+
+.env
+.env.*
+!.env.example
+!.env.production.example
+
+*.log
+.DS_Store

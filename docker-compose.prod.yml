@@ -1,0 +1,52 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# AI Virtual Office — PRODUCTION
+#
+# Publishes NO host ports. The container exposes 8787 on the Docker network and
+# a reverse proxy routes to it.
+#
+# This file deliberately declares NO external network. The measured deploy host
+# runs Coolify with its own Traefik proxy, which attaches the service and writes
+# the routing labels itself. Declaring `reverse_proxy_network` here — the
+# convention in the sibling repos — makes `up` fail outright on a host where
+# that network does not exist.
+#
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# For the manual reverse-proxy setup instead, add the overlay:
+#
+#   docker compose -f docker-compose.prod.yml -f docker-compose.proxy.yml up -d
+#
+# The host is aarch64; every image here is multi-arch and nothing builds a
+# native module.
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  office:
+    build:
+      context: .
+      target: runtime
+    image: ai-virtual-office:latest
+    container_name: ai_virtual_office
+    restart: always
+    expose:
+      - "8787"
+    env_file:
+      - path: .env.production
+        required: false
+    environment:
+      NODE_ENV: production
+      PORT: 8787
+      HOST: 0.0.0.0
+      OFFICE_REDACT_PROMPTS: "${OFFICE_REDACT_PROMPTS:-false}"
+      OFFICE_IDENTITY_PATH: /data/identities.json
+    volumes:
+      - office_identities:/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8787/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  office_identities:

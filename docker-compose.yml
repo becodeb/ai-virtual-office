@@ -1,0 +1,41 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# AI Virtual Office — LOCAL
+#
+# Publishes the port, because locally you want to open it:
+#
+#   docker compose up --build
+#   open http://localhost:8787
+#
+# Then point a Claude Code session at it — see hooks/README.md.
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  office:
+    build:
+      context: .
+      target: runtime
+    image: ai-virtual-office:local
+    container_name: ai_virtual_office
+    restart: unless-stopped
+    ports:
+      - "${OFFICE_PORT:-8787}:8787"
+    environment:
+      NODE_ENV: production
+      PORT: 8787
+      HOST: 0.0.0.0
+      # Set to "true" to strip every task and prompt summary from the labels.
+      OFFICE_REDACT_PROMPTS: "${OFFICE_REDACT_PROMPTS:-false}"
+      OFFICE_IDENTITY_PATH: /data/identities.json
+    volumes:
+      # Coffee counts, ranks and assigned skins survive a restart. Without this
+      # the leaderboard resets every deploy and promotions never happen.
+      - office_identities:/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8787/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  office_identities:

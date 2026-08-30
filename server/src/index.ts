@@ -11,6 +11,7 @@ import { isWithinBodySizeCap, validateInboundPayload } from './net/validate.js';
 import { createWorld, reduce } from './world/machine.js';
 import { IdentityStore } from './world/identity.js';
 import { applyP1OnHookEvent, runP1Behaviors } from './p1/index.js';
+import { createStaticHandler } from './net/static.js';
 
 // Must match the hook's own default in hooks/office-hook.sh and
 // hooks/settings.example.json. If these two ever drift apart, a fresh install
@@ -99,6 +100,12 @@ function handleHealthz(res: ServerResponse): void {
   res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ ok: true }));
 }
 
+/**
+ * In production the hub also serves the built client, so the office is one
+ * container behind one port. Unset in development, where Vite serves it.
+ */
+const serveStatic = createStaticHandler(process.env.OFFICE_STATIC_DIR);
+
 const server = createServer((req, res) => {
   if (req.method === 'GET' && req.url === '/healthz') {
     handleHealthz(res);
@@ -108,6 +115,7 @@ const server = createServer((req, res) => {
     void handleEvents(req, res);
     return;
   }
+  if (serveStatic !== null && serveStatic(req, res)) return;
   res.writeHead(404).end();
 });
 
@@ -149,7 +157,10 @@ server.on('error', (error: NodeJS.ErrnoException) => {
 
 server.listen(PORT, HOST, () => {
   // eslint-disable-next-line no-console
-  console.log(`[office] hub listening on http://${HOST}:${PORT} (redactPrompts=${redactPrompts})`);
+  console.log(
+    `[office] hub listening on http://${HOST}:${PORT} ` +
+      `(redactPrompts=${redactPrompts}, static=${serveStatic !== null ? process.env.OFFICE_STATIC_DIR : 'off'})`,
+  );
 });
 
 export { server, world, hub };
