@@ -155,3 +155,27 @@ Indexing cut the vertex count from 19476 to 8796.
 **Recommendation:** commit a curated subset of roughly 16 skins (~9.5 MB) plus the shared
 `animations.glb` (2.8 MB) — about **12 MB committed**. The pipeline regenerates any of the
 other 36 on demand from the gitignored raw assets.
+
+## Instancing and scale — validated
+
+`SkeletonUtils.clone` is the correct way to place several agents that share a skin. Measured on
+an exported character GLB:
+
+- Cloned skeletons and bone objects are **independent** — two clones driven by different clips
+  diverge correctly (one seated at pelvis 57, one mid-stride at 95).
+- Geometry and material are **shared** between clones. N agents wearing the same skin cost one
+  GPU upload, not N.
+- `crossFadeTo` blends cleanly between clips from the shared `animations.glb`.
+
+### Scale must be normalised at export
+
+The exported GLB inherits the FBX root scale, so world-space pelvis height reads **5706** and
+**9548** instead of the 57 and 95 the clips were authored against — the character is roughly
+100x too large, about 200 metres tall. On a 1x1m grid that is not a cosmetic problem, it breaks
+pathfinding, seat sockets, and the camera framing all at once.
+
+**Pipeline requirement:** bake a uniform scale at export so a character stands about **1.75 m**
+tall in world units, and apply the same factor to the hip and IK-foot position tracks in
+`animations.glb` so translation stays consistent with the mesh. Assert the standing height in
+the pipeline's regression test — a character that is silently 100x too big renders as an empty
+screen, which is a confusing failure to debug from the symptom.
