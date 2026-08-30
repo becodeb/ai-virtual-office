@@ -174,8 +174,11 @@ The exported GLB inherits the FBX root scale, so world-space pelvis height reads
 100x too large, about 200 metres tall. On a 1x1m grid that is not a cosmetic problem, it breaks
 pathfinding, seat sockets, and the camera framing all at once.
 
-**Pipeline requirement:** bake a uniform scale at export so a character stands about **1.75 m**
-tall in world units, and apply the same factor to the hip and IK-foot position tracks in
-`animations.glb` so translation stays consistent with the mesh. Assert the standing height in
-the pipeline's regression test — a character that is silently 100x too big renders as an empty
-screen, which is a confusing failure to debug from the symptom.
+**Pipeline requirement:** bake a uniform scale at export, and apply the same factor to the hip
+and IK-foot position tracks in `animations.glb` so translation stays consistent with the mesh.
+Assert the standing height in the pipeline's regression test — a character that is silently
+100x too big renders as an empty screen, which is a confusing failure to debug from the symptom.
+
+**The target height is ~1.05 world units, not 1.75.** See the prop measurements below: the
+Kenney kit is a stylised dollhouse scale, not metric. Normalising the character to 1.75 would
+make it taller than the 1.29-unit walls of the office it works in.
