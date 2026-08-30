@@ -95,25 +95,25 @@ Estimate is driven by five greenfield workspaces (`hooks/`, `server/`, `client/`
 
 ## Phase 4: Client
 
-- [ ] 4.1 Scaffold `client/` (Vite + React + R3F + Tailwind config, `index.html`, `src/main.tsx`).
-- [ ] 4.2 Implement `client/src/net/useWorld.ts`: WS client, `office.v1` handshake, `hello{lastSeq}`, resync-on-gap logic, exponential backoff 500ms→8s ±20% jitter.
-- [ ] 4.3 Implement `client/src/state/store.ts`: zustand store written only by the WS client; selector-based subscriptions.
-- [ ] 4.4 RED integration test (ws harness): connect → snapshot → deltas → forced drop → reconnect with `lastSeq` → replay; `lastSeq` outside ring → full snapshot.
-- [ ] 4.5 Implement `client/src/scene/Floor.tsx`: instanced `floorFull` tiles from the layout, one grid cell = one world unit (world-scale.md).
-- [ ] 4.6 Implement `client/src/scene/Props.tsx`: one `<Instances>` per Kenney prop type, `minY=0` placement.
-- [ ] 4.7 Implement `client/src/scene/Agent.tsx` + `Agents.tsx`: `useGLTF` load-once per skin, `SkeletonUtils.clone` per agent (never plain `.clone()`), geometry/material shared by reference.
-- [ ] 4.8 Implement `client/src/anim/clipMap.ts`: `AgentState`→clip-name map using verbatim names from `animations.glb`; startup assertion throws on first missing clip name.
-- [ ] 4.9 Implement `client/src/anim/useAgentAnimator.ts`: one `AnimationMixer` per agent, crossfade 0.25s locomotion↔idle / 0.12s reactions, `LoopOnce`+`clampWhenFinished`+`finished` event for `Sitting_Enter→Sitting_Idle_Loop`, walk playback rate scaled to server move speed.
-- [ ] 4.10 RED test: transition from `Walk_Loop` to `Sitting_Enter` crossfades over non-zero duration, no single unblended frame (office-renderer spec, animation crossfade).
-- [ ] 4.11 Implement seat-socket snapping: on arrival, lerp root onto socket `position`/`facingRad` exactly, no clipping (office-simulation spec, seat-socket alignment).
-- [ ] 4.12 Implement `client/src/hud/Label.tsx`: drei `<Html occlude distanceFactor center>` anchored to head-height; shows machine id, state, task text truncated to 80 chars; `OFFICE_REDACT_PROMPTS=true` drops task/prompt text, keeps tool name + metadata.
-- [ ] 4.13 RED test: label with a 120-char task summary renders ≤80 chars; redaction env var hides task text and shows tool/metadata only (office-renderer spec: both label scenarios).
-- [ ] 4.14 Implement `client/src/scene/CameraRig.tsx`: Free-Orbital (`OrthographicCamera` + drei `MapControls`, clamped polar angle/zoom/pan) and Focus-Agent (lerp to `agentPos + fixedIsoOffset`, damping, follow-until-pan-or-despawn); `F` toggles; click-to-focus emits `focus`.
-- [ ] 4.15 RED test: Free-Orbital camera is not locked to any character; Focus-Agent camera moves to keep the selected character in view as it moves (office-renderer spec, camera modes).
-- [ ] 4.16 Implement `client/src/hud/*.tsx`: connection state badge, redaction badge, ship-it celebration banner explicitly labeled "inferred" (never "verified").
-- [ ] 4.17 RED test: ship-it banner displays the "inferred" label (office-renderer spec).
-- [ ] 4.18 [P1] Implement `client/src/scene/Npcs.tsx`: The Architect NPC (static, `Idle_FoldArms_Loop`/`Idle_No_Loop`), coffee-machine location marker for coffee-run rendering, bear prop interaction render (teddy-bear debugging), zombie-hour Revenant skin swap render, ship-it `Dance_Loop` + confetti FX.
-- [ ] 4.19 Implement `client/src/scene/Fx.tsx`: confetti, elevator-ding, alarm cosmetic one-shot events from `event` frames.
+- [x] 4.1 Scaffold `client/` (Vite + React + R3F + Tailwind config, `index.html`, `src/main.tsx`).
+- [x] 4.2 Implement `client/src/net/useWorld.ts`: WS client, `office.v1` handshake, `hello{lastSeq}`, resync-on-gap logic, exponential backoff 500ms→8s ±20% jitter.
+- [x] 4.3 Implement `client/src/state/store.ts`: zustand store written only by the WS client; selector-based subscriptions.
+- [x] 4.4 RED integration test (ws harness): connect → snapshot → deltas → forced drop → reconnect with `lastSeq` → replay; `lastSeq` outside ring → full snapshot. Implemented against a fake `WebSocketLike` injected via `useWorld`'s factory param (`net/useWorld.test.ts`) — `server/` is a separate workspace this package must not import, so the live end-to-end path is `pnpm --filter client dev` against a running Unit 2 server, per the runtime-harness column above.
+- [x] 4.5 Implement `client/src/scene/Floor.tsx`: instanced `floorFull` tiles from the layout, one grid cell = one world unit (world-scale.md).
+- [x] 4.6 Implement `client/src/scene/Props.tsx`: `floorFull`/`wall` instanced via drei `<Instances>` in `Floor.tsx`; desks/chairs/sofas/kitchen/screen/bear (each mixing multiple internal sub-meshes, e.g. `desk`+`drawer`) render as cloned `<primitive>` scene graphs at low counts instead — documented engineering choice, see file header. `minY=0` placement throughout (world-scale.md).
+- [x] 4.7 Implement `client/src/scene/Agent.tsx` + `Agents.tsx`: `useGLTF` load-once per skin, `SkeletonUtils.clone` per agent (never plain `.clone()`), geometry/material shared by reference.
+- [x] 4.8 Implement `client/src/anim/clipMap.ts`: `AgentState`→clip-name map using verbatim names from `animations.glb`; startup assertion throws on first missing clip name (`assertClipsExist`, wired at boot in `assets/useAssetsManifest.ts`).
+- [x] 4.9 Implement `client/src/anim/useAgentAnimator.ts`: one `AnimationMixer` per agent, crossfade 0.25s locomotion↔idle / 0.12s reactions, `LoopOnce`+`clampWhenFinished`+`finished` event for `Sitting_Enter→Sitting_Idle_Loop`, walk playback rate scaled to server move speed.
+- [x] 4.10 RED test: transition from `Walk_Loop` to `Sitting_Enter` crossfades over non-zero duration, no single unblended frame (office-renderer spec, animation crossfade). `anim/useAgentAnimator.test.ts` drives the real `THREE.AnimationMixer` and asserts both actions carry partial weight mid-fade.
+- [x] 4.11 Implement seat-socket snapping: on arrival, lerp root onto socket `position`/`facingRad` exactly, no clipping (office-simulation spec, seat-socket alignment). See `scene/agentTarget.ts`'s documented deviation: the frozen hub never re-broadcasts `position`/`agent_path` after `agent_add`, so the destination is derived from desk-occupancy + state signals instead of the exact server path.
+- [x] 4.12 Implement `client/src/hud/Label.tsx`: drei `<Html occlude distanceFactor center>` anchored to head-height; shows machine id, state, task text truncated to 80 chars; redaction (driven by the hub's `hello.config.redactPrompts`) drops task/prompt text, keeps tool name + metadata.
+- [x] 4.13 RED test: label with a 120-char task summary renders ≤80 chars; redaction hides task text and shows tool/metadata only (office-renderer spec: both label scenarios). `lib/label.test.ts`.
+- [x] 4.14 Implement `client/src/scene/CameraRig.tsx`: Free-Orbital (`OrthographicCamera` + drei `MapControls`, clamped polar angle/zoom/pan) and Focus-Agent (lerp to `agentPos + fixedIsoOffset`, damping, follow-until-pan-or-despawn); `F` toggles; click-to-focus emits `focus`.
+- [x] 4.15 RED test: Free-Orbital camera is not locked to any character; Focus-Agent camera moves to keep the selected character in view as it moves (office-renderer spec, camera modes). Focus-follow math extracted to `scene/cameraMath.ts` and unit-tested (`cameraMath.test.ts`) since mounting a real `<Canvas>`/WebGL context is out of scope for a jsdom vitest run; Free-Orbital's "not locked" property is structural (MapControls owns the camera, no per-frame override runs outside `mode==='focus'`).
+- [x] 4.16 Implement `client/src/hud/*.tsx`: connection state badge, redaction badge, ship-it celebration banner explicitly labeled "inferred" (never "verified"), plus the coffee-count leaderboard.
+- [x] 4.17 RED test: ship-it banner displays the "inferred" label (office-renderer spec). `hud/shipItBanner.test.ts`.
+- [x] 4.18 [P1] Implement `client/src/scene/Npcs.tsx`: The Architect NPC (static, `Idle_FoldArms_Loop`/`Idle_No_Loop`), coffee-machine location marker for coffee-run rendering, bear prop interaction render (teddy-bear debugging, via `agent_anim` one-shot cues in `scene/Agent.tsx`), zombie-hour Revenant skin swap render (`scene/effectiveDisplay.ts`), ship-it `Dance_Loop` + confetti FX. Two deviations documented in-file: the wire protocol has no delta op for NPC state at all (Architect's live reaction can't animate between snapshots), and the exact server-picked Revenant skin variant isn't observable client-side (`identityKey` isn't on the wire) so it's approximated deterministically from `agentId`.
+- [x] 4.19 Implement `client/src/scene/Fx.tsx`: confetti, elevator-ding, alarm, and the `moo` cow cosmetic one-shot events from `event` frames.
 
 ## Phase 5: Delivery
 
