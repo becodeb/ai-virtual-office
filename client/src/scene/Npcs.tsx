@@ -32,7 +32,17 @@ function Architect({ manifest }: { manifest: AssetsManifest }): JSX.Element | nu
   const architect = useMemo(() => npcs.find(isArchitectNpc), [npcs]);
   const gltf = useGLTF(skinGlbUrl(ARCHITECT_SKIN_FILE));
   const animationsGltf = useGLTF(animationsGlbUrl(manifest));
-  const cloned = useMemo(() => SkeletonUtils.clone(gltf.scene) as THREE.Object3D, [gltf.scene]);
+  const cloned = useMemo(() => {
+    const root = SkeletonUtils.clone(gltf.scene) as THREE.Object3D;
+    root.traverse((obj) => {
+      const mesh = obj as THREE.Mesh;
+      if (mesh.isMesh === true) {
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+      }
+    });
+    return root;
+  }, [gltf.scene]);
   useAgentAnimator(cloned, animationsGltf.animations, architect?.clip ?? 'Idle_FoldArms_Loop');
 
   if (architect === undefined) return null;

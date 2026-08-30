@@ -7,9 +7,11 @@
 import { useMemo } from 'react';
 import { Instance, Instances } from '@react-three/drei';
 import { useGLTF } from '@react-three/drei';
+import { Color } from 'three';
 import type { Mesh, MeshStandardMaterial } from 'three';
 import { propGlbUrl } from '../assets/manifest.js';
-import { perimeterWallCells, type Cell, type FloorLayout } from '../net/floorLayout.js';
+import type { Cell, FloorLayout } from '../net/floorLayout.js';
+import { footprintOffset, shiftGeometry } from './propCentering.js';
 
 export interface FloorProps {
   layout: FloorLayout;
@@ -26,10 +28,17 @@ export interface FloorProps {
 function usePropMeshes(name: string): Array<{ geometry: Mesh['geometry']; material: MeshStandardMaterial }> {
   const gltf = useGLTF(propGlbUrl(name));
   return useMemo(() => {
+    // One offset for the whole prop — see propCentering.ts.
+    const offset = footprintOffset(gltf.scene);
     const found: Array<{ geometry: Mesh['geometry']; material: MeshStandardMaterial }> = [];
     gltf.scene.traverse((child) => {
       const mesh = child as Mesh;
-      if (mesh.isMesh) found.push({ geometry: mesh.geometry, material: mesh.material as MeshStandardMaterial });
+      if (mesh.isMesh) {
+        found.push({
+          geometry: shiftGeometry(mesh.geometry, offset),
+          material: mesh.material as MeshStandardMaterial,
+        });
+      }
     });
     if (found.length === 0) throw new Error(`Prop "${name}" has no mesh`);
     return found;
@@ -41,20 +50,35 @@ function InstancedProp({
   name,
   cells,
   rotationFor,
+  receiveShadow = false,
+  tint,
 }: {
   name: string;
   cells: readonly Cell[];
   rotationFor?: (cell: Cell) => [number, number, number];
+  receiveShadow?: boolean;
+  tint?: string;
 }): JSX.Element {
   const parts = usePropMeshes(name);
+  const materials = useMemo(
+    () =>
+      parts.map((part) => {
+        if (tint === undefined) return part.material;
+        const m = part.material.clone();
+        m.color = new Color(tint);
+        return m;
+      }),
+    [parts, tint]
+  );
   return (
     <group>
       {parts.map((part, partIndex) => (
         <Instances
           key={partIndex}
           geometry={part.geometry}
-          material={part.material}
+          material={materials[partIndex] ?? part.material}
           limit={Math.max(cells.length, 1)}
+          receiveShadow={receiveShadow}
         >
           {cells.map((cell) => (
             // All props sit on minY=0 (world-scale.md) — no vertical offset needed.
@@ -79,19 +103,11 @@ export function Floor({ layout }: FloorProps): JSX.Element {
     return cells;
   }, [layout.width, layout.height]);
 
-  const wallCells = useMemo(() => perimeterWallCells(layout), [layout]);
-
   return (
     <group>
-      <InstancedProp name="floorFull" cells={tileCells} />
-      <InstancedProp
-        name="wall"
-        cells={wallCells}
-        rotationFor={([, y]) =>
-          // Walls on the top/bottom edges run east-west; the side edges rotate to run north-south.
-          y === 0 || y === layout.height - 1 ? [0, 0, 0] : [0, Math.PI / 2, 0]
-        }
-      />
+      {/* A warmer, slightly darker floor: the stock tile is close enough to the
+          furniture's own tone that desks and characters wash into it. */}
+      <InstancedProp name="floorFull" cells={tileCells} receiveShadow tint="#a87f5c" />
     </group>
   );
 }

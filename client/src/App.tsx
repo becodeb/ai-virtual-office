@@ -49,7 +49,7 @@ export default function App(): JSX.Element {
 
   return (
     <div className="relative h-full w-full">
-      <Canvas shadows={false}>
+      <Canvas shadows>
         <Scene
           layout={layout}
           manifest={manifest}

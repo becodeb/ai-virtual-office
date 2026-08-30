@@ -22,8 +22,16 @@
 import * as THREE from 'three';
 import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
-/** Target standing height in world units (decision/world-scale.md — not 1.75). */
-export const TARGET_STANDING_HEIGHT = 1.05;
+/**
+ * Target standing height in world units.
+ *
+ * Derived from the Kenney desk, which is the prop whose real-world height is
+ * least ambiguous: a real desk is 0.75m and a real person 1.75m, a ratio of
+ * 2.33, and the kit's desk is 0.38 units tall. Anything near 1.05 leaves the
+ * characters visibly oversized next to their own furniture — their heads alone
+ * are as tall as a chair back.
+ */
+export const TARGET_STANDING_HEIGHT = 0.85;
 
 export interface BakeResult {
   /**

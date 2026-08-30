@@ -20,13 +20,30 @@ export type CellKind = typeof CELL_FREE | typeof CELL_BLOCKED | typeof CELL_SEAT
 
 export type Cell = readonly [number, number];
 
-/** Seat height, per `world-scale.md` ("chair seat height: ~0.33"). */
-export const CHAIR_SEAT_HEIGHT = 0.33;
+/** Measured seat surface of the `chairDesk` prop (vertex-height histogram peak). */
+export const CHAIR_SEAT_SURFACE = 0.31;
+
+/**
+ * Where the seated animation puts the pelvis, as a fraction of standing height.
+ * Measured from the retargeted `Sitting_Idle_Loop`: 0.180 on a 1.05-unit
+ * character.
+ */
+export const SEATED_PELVIS_FRACTION = 0.171;
+
+/** Character standing height, per `world-scale.md`. */
+export const STANDING_HEIGHT = 0.85;
+
+/**
+ * Y for a seated character's ORIGIN — not its hips.
+ *
+ * The sitting clip already lifts the pelvis off the character's own origin, so
+ * placing the origin at the chair's seat surface adds the two together and the
+ * character hovers a whole hip-height above the chair. Subtracting the clip's
+ * own contribution lands the pelvis exactly on the seat.
+ */
+export const CHAIR_SEAT_HEIGHT = CHAIR_SEAT_SURFACE - SEATED_PELVIS_FRACTION * STANDING_HEIGHT;
 /** Desk surface height, per `world-scale.md`. */
 export const DESK_SURFACE_HEIGHT = 0.38;
-/** Character standing height, per `world-scale.md`. */
-export const STANDING_HEIGHT = 1.05;
-
 /**
  * A seat's exact transform. `facingRad` is measured with 0 = facing +z
  * (south, increasing row index) and PI = facing -z (north, decreasing row
@@ -100,6 +117,8 @@ interface RawFloor {
   meetingRoom: { screenCell: [number, number] };
   bear: { cell: [number, number]; standCell: [number, number] };
   architect: { cell: [number, number] };
+  /** Whether the floor is enclosed by perimeter walls. Off: in an isometric view the two near walls hide exactly the desks you want to watch. */
+  walls?: boolean;
   desks: RawDesk[];
   lounge: { seats: RawSeat[] };
   decor?: RawDecor[];

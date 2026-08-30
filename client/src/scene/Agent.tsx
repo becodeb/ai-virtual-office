@@ -43,8 +43,8 @@ const HEAD_HEIGHT = 1.05; // world-scale.md standing height; the label anchors a
  * deterministically — the same character always sits on the same rung, so the
  * labels do not shuffle between frames.
  */
-const LABEL_STAGGER_STEPS = 3;
-const LABEL_STAGGER_HEIGHT = 0.22;
+const LABEL_STAGGER_STEPS = 4;
+const LABEL_STAGGER_HEIGHT = 0.38;
 
 function labelStagger(agent: AgentSnapshot, layout: FloorLayout): number {
   const index =
@@ -86,6 +86,14 @@ export function Agent({ agent, layout, desks, clips, manifestSkin, redactPrompts
         }
       });
     }
+    // Characters need to drop a shadow or they read as stickers on the floor.
+    root.traverse((obj) => {
+      const mesh = obj as THREE.Mesh;
+      if (mesh.isMesh === true) {
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+      }
+    });
     return root;
   }, [gltf.scene, tintSlot, manifestSkin, paletteColor]);
 

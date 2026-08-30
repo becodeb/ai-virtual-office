@@ -14,10 +14,12 @@
  */
 import { useMemo } from 'react';
 import { useGLTF } from '@react-three/drei';
+import * as THREE from 'three';
 import type { Object3D } from 'three';
 import { SkeletonUtils } from 'three-stdlib';
 import { propGlbUrl } from '../assets/manifest.js';
 import type { FloorLayout } from '../net/floorLayout.js';
+import { footprintOffset } from './propCentering.js';
 
 /** Desk surface height, per `openspec/research/world-scale.md`. */
 const DESK_SURFACE_HEIGHT = 0.38;
@@ -25,7 +27,24 @@ const DESK_SURFACE_HEIGHT = 0.38;
 function PropInstance({ name, position, rotationY = 0 }: { name: string; position: [number, number, number]; rotationY?: number }): JSX.Element {
   const gltf = useGLTF(propGlbUrl(name));
   const cloned = useMemo(() => SkeletonUtils.clone(gltf.scene) as Object3D, [gltf.scene]);
-  return <primitive object={cloned} position={position} rotation={[0, rotationY, 0]} />;
+  // Kenney props are not authored around their origin, so shift the mesh inside
+  // the rotated group: that way the correction rotates with the prop instead of
+  // sliding it in a fixed world direction.
+  const [dx, dz] = useMemo(() => footprintOffset(gltf.scene), [gltf.scene]);
+  useMemo(() => {
+    cloned.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (mesh.isMesh) {
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+      }
+    });
+  }, [cloned]);
+  return (
+    <group position={position} rotation={[0, rotationY, 0]}>
+      <primitive object={cloned} position={[-dx, 0, -dz]} />
+    </group>
+  );
 }
 
 export interface PropsProps {

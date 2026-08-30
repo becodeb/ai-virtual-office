@@ -21,6 +21,12 @@ export interface SceneProps {
 
 export function Scene({ layout, manifest, cameraMode, onCameraModeChange, focusAgentId, redactPrompts, onSelectAgent }: SceneProps): JSX.Element {
   const floorCenter = useMemo(() => new THREE.Vector3(layout.width / 2, 0, layout.height / 2), [layout.width, layout.height]);
+  const reach = Math.max(layout.width, layout.height);
+  const sunTarget = useMemo(() => {
+    const o = new THREE.Object3D();
+    o.position.set(layout.width / 2, 0, layout.height / 2);
+    return o;
+  }, [layout.width, layout.height]);
 
   return (
     <>
@@ -31,8 +37,35 @@ export function Scene({ layout, manifest, cameraMode, onCameraModeChange, focusA
         mode={cameraMode}
         onModeChange={onCameraModeChange}
       />
-      <ambientLight intensity={0.7} />
-      <directionalLight position={[10, 15, 5]} intensity={1.1} castShadow={false} />
+      {/* Soft fill so nothing goes pure black, plus one sun that actually casts. */}
+      <ambientLight intensity={0.68} />
+      <hemisphereLight args={['#e8eef7', '#9c8a6f', 0.5]} />
+      {/*
+        A directional light aims at its `target`, which defaults to the world
+        origin — the CORNER of the floor, not its middle. Without an explicit
+        target the sun rakes across the diorama from the wrong direction and the
+        shadow frustum covers mostly empty space, so no shadow lands anywhere
+        you can see it.
+      */}
+      <primitive object={sunTarget} />
+      <directionalLight
+        position={[
+          floorCenter.x + reach * 0.55,
+          reach * 1.15,
+          floorCenter.z - reach * 0.35,
+        ]}
+        target={sunTarget}
+        intensity={1.6}
+        castShadow
+        shadow-mapSize={[2048, 2048]}
+        shadow-bias={-0.0007}
+        shadow-normalBias={0.02}
+      >
+        <orthographicCamera
+          attach="shadow-camera"
+          args={[-reach, reach, reach, -reach, 0.5, reach * 4]}
+        />
+      </directionalLight>
       <Floor layout={layout} />
       <Props layout={layout} />
       <Npcs layout={layout} manifest={manifest} />
