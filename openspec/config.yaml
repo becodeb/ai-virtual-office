@@ -1,0 +1,136 @@
+schema: spec-driven
+
+project: virtual-office
+status: greenfield
+detected: 2026-08-30
+
+context: |
+  Tech stack: pnpm workspaces monorepo, TypeScript, Vite + React Three Fiber
+  + Tailwind client, Node WebSocket server, Docker for deploy.
+  Architecture: undecided beyond monorepo split (client app / server app /
+  shared packages) — no source code written yet.
+  Testing: none yet; plan for vitest (unit) once workspaces exist.
+  Style: no linter/formatter configured yet.
+  Key constraint: character skins (Quaternius, IK rig) and animation clips
+  (Universal Animation Library, Unreal Mannequin rig) use DIFFERENT
+  skeletons — retargeting is mandatory, OFFLINE at build time, never in the
+  browser. SkeletonUtils.retargetClip was tried and rejected: it emitted a
+  hip position track that was constant across every frame. Use the validated
+  world-delta implementation and bone map in openspec/research/.
+
+strict_tdd: false  # no test runner exists yet; re-evaluate once vitest is added to a workspace
+
+testing:
+  status: to be established — greenfield, plan for vitest
+  detected: 2026-08-30
+  test_runner:
+    command: ""
+    framework: "none yet — plan: vitest"
+  layers:
+    unit: { available: false, tool: "planned: vitest" }
+    integration: { available: false, tool: "planned: vitest + ws client harness for the WebSocket server" }
+    e2e: { available: false, tool: "none planned yet" }
+  coverage:
+    available: false
+    command: "planned: vitest --coverage"
+  quality_tools:
+    linter: { available: false, command: "" }
+    type_checker: { available: false, command: "planned: tsc --noEmit (TypeScript monorepo)" }
+    formatter: { available: false, command: "" }
+
+tooling:
+  node: v24.14.1
+  npm: 11.11.0
+  pnpm: 11.13.0
+  docker: 29.3.1
+  git: 2.47.3
+  gh: "2.46.0 (authed as ezemastro, org becodeb)"
+  bun: not installed
+  fd_bat_eza: not installed, no brew available
+  rg: 14.1.1 (available)
+
+execution:
+  execution_mode: auto
+  artifact_store: openspec
+  delivery_strategy: single-pr
+  review_budget_lines: 800
+
+rules:
+  proposal:
+    - Include rollback plan for risky changes
+    - State which pnpm workspace package(s) the change touches
+  specs:
+    - Use Given/When/Then for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+    - Animation/retargeting requirements MUST state which skeleton (Quaternius 20-bone vs Unreal Mannequin) and which pack (UAL1/UAL2) they apply to
+  design:
+    - Include sequence diagrams for complex flows (e.g. WebSocket message flow, retargeting pipeline)
+    - Document architecture decisions with rationale
+    - Any decision to retarget animations at runtime instead of offline MUST be justified explicitly — offline is the default
+  tasks:
+    - Group by phase, use hierarchical numbering
+    - Keep tasks completable in one session
+    - Asset pipeline tasks (retargeting, GLB conversion) MUST be isolated from gameplay/networking tasks
+  apply:
+    guidelines:
+      - Follow pnpm workspace conventions; keep client/server/shared packages isolated
+      - Never write raw FBX read/parsing logic at runtime — conversion/retargeting happens in an offline build step
+      - Do not commit files under /assets/ (gitignored, 267MB raw source) — only committed/processed outputs belong in the repo or a build artifact store
+      - Production Docker Compose MUST NOT publish host ports (use `expose` only), MUST join the external `reverse_proxy_network`, MUST set `restart: always`, MUST read `.env.production` via `env_file` with `required: false`, and MUST define healthchecks (see deploy convention below)
+      - Local/dev Docker Compose MAY map host ports for direct access
+    tdd: false
+    test_command: ""
+  verify:
+    test_command: ""
+    build_command: ""
+    coverage_threshold: 0
+  archive:
+    - Warn before merging destructive deltas
+
+deploy_convention:
+  source: "sibling repos kodu/docker-compose.prod.yml, trellofake/docker-compose.prod.yml"
+  production:
+    - No host ports published — `expose` only
+    - Joins external `reverse_proxy_network`
+    - "restart: always"
+    - "env_file: .env.production with required: false"
+    - Healthchecks defined for every service
+  local_dev:
+    - Host ports mapped directly for local access
+
+asset_inventory:
+  models:
+    path: assets/models/
+    count: 50
+    format: fbx (~2.3MB each)
+    rig: "Quaternius simplified 20-bone: Hips, Abdomen, Torso, Neck, Head, Shoulder.L/R, UpperArm.L/R, LowerArm.L/R, Fist.L/R, UpperLeg.L/R, LowerLeg.L/R, Foot.L/R, PoleTarget.L/R (IK helpers), CharacterArmature root"
+    notes: no embedded animation clips
+  animations:
+    path: assets/animations/
+    packs:
+      - name: UAL1 (Universal Animation Library 1)
+        formats: [glb (7.6MB), fbx (larger)]
+        clip_count: 43
+        sample_clips: [A_TPose, Idle_Loop, Walk_Loop, Walk_Formal_Loop, Jog_Fwd_Loop, Sprint_Loop, Idle_Talking_Loop, Sitting_Enter, Sitting_Idle_Loop, Sitting_Talking_Loop, Sitting_Exit, Dance_Loop, Death01, Driving_Loop, Fixing_Kneeling, Interact, PickUp_Table, Push_Loop, Punch_Cross, Punch_Jab, Roll, Hit_Chest, Hit_Head, Jump_Start, Jump_Loop, Jump_Land, Crouch_Idle_Loop, Crouch_Fwd_Loop, Swim_Idle_Loop, Swim_Fwd_Loop, Sword_Idle, Sword_Attack, Spell_Simple_*, Pistol_*]
+      - name: UAL2 (Universal Animation Library 2)
+        formats: [glb (8.1MB), fbx (larger)]
+        clip_count: 43
+        sample_clips: [A_TPose, Idle_FoldArms_Loop, Idle_No_Loop, Yes, Idle_TalkingPhone_Loop, Consume, Walk_Carry_Loop, TreeChopping_Loop, Farm_Harvest, Farm_PlantSeed, Farm_Watering, Chest_Open, LayToIdle, Zombie_Idle_Loop, Zombie_Walk_Fwd_Loop, Zombie_Scratch, NinjaJump_*, Slide_*, Shield_*, Sword_Regular_*, Melee_Hook, OverhandThrow, ClimbUp_1m, Hit_Knockback]
+    rig: "Unreal Mannequin: root, pelvis, spine_01..spine_03, clavicle_l/r, upperarm_l/r, lowerarm_l/r, hand_l/r + full finger chains, thigh_l/r, calf_l/r, foot_l/r, ball_l/r, neck_01, Head"
+    skinned_mesh: "assets/animations/.../Female Mannequin/Unreal-Godot/Mannequin_F.glb — natively matches the UAL rig"
+    retargeting_reference: "Both packs ship an A_TPose clip — required by three.js SkeletonUtils.retargetClip as the reference pose"
+  office_props:
+    path: "assets/office/kenneykit/Models/GLTF format/"
+    count: 140
+    format: glb (already converted, no conversion needed)
+    ignored_variants: [DAE, FBX, OBJ, STL, isometric PNG sprites]
+
+architectural_constraints:
+  - "Character skins (Quaternius 20-bone rig) and animation clips (Unreal Mannequin rig) use DIFFERENT skeletons — retargeting is mandatory."
+  - "Retarget OFFLINE in a build step (three.js SkeletonUtils.retargetClip using each pack's A_TPose as reference), NOT in the browser at runtime."
+
+repo_state:
+  git: "initialized, branch main, no commits yet"
+  gitignore: "written and staged; ignores /assets/ (267MB raw source) plus standard node/dist/env entries"
+  package_json: none yet
+  source_code: none yet

@@ -1,0 +1,20 @@
+# Raw source assets (267MB of FBX/GLB) — never committed.
+# The build pipeline (pnpm assets:build) derives web-optimized GLBs from these
+# into client/public/assets/, which IS committed.
+/assets/
+
+node_modules/
+dist/
+build/
+.vite/
+*.log
+.DS_Store
+
+.env
+.env.local
+.env.production
+!.env.example
+!.env.production.example
+
+coverage/
+.turbo/
