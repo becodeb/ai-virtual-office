@@ -80,3 +80,30 @@ Total from last event to gone: about 17 and a half minutes.
 turn is legible to someone glancing at a second monitor — long enough to notice, short enough
 that a dead session does not haunt the floor. Any event arriving before `DESPAWNING`
 cancels the whole chain and returns the character to `SEATED_IDLE`.
+
+## 8. The hook is POSIX sh + curl, not Node
+
+Measured on the target Raspberry Pi: 3 ms versus 44 ms, a 13x difference, of which 28 ms is
+Node's process startup and unrecoverable. See `openspec/research/hook-performance.md`.
+The Node implementation ships as a documented fallback for hosts without `curl`.
+
+## 9. Role tinting uses a `_slot` vertex attribute
+
+The design proposed recomputing slot vertex ranges after `mergeVertices` with an invented
+seam-priority rule (`Face > Hair > Skin > ...`). That is unnecessary. Writing a per-vertex
+`_slot` attribute **before** indexing makes it part of the dedup key: measured, it survives
+`mergeVertices` with integral values and **zero** vertices whose baked colour disagrees with
+their slot. Exact, not heuristic. Drop the seam-priority rule.
+
+## 10. Zombie timing is +2 min, superseding the design's 5 min
+
+Decision 7 in this document sets `SLEEPING -> ZOMBIE` at +2 minutes. `design.md` independently
+defaulted to 5. This document wins; 2 minutes keeps the whole turn under 18 minutes so the gag
+is still connected to the session that caused it.
+
+## 11. `SubagentStart` is confirmed to exist
+
+The design flagged it as unverified. It is verified — see
+`openspec/research/claude-code-hooks.md`, checked against the installed Claude Code 2.1.251
+binary. Use the real event; keep a `PreToolUse` `Task` matcher only as a compatibility
+fallback for older builds on friends' machines.
