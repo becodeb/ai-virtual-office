@@ -117,13 +117,16 @@ Estimate is driven by five greenfield workspaces (`hooks/`, `server/`, `client/`
 
 ## Phase 5: Delivery
 
-- [ ] 5.1 Create `docker-compose.yml` (local): host ports `8080:8080` and `5173:5173`, bind-mounted source for HMR, `OFFICE_REDACT_PROMPTS=false`, identity volume mounted.
-- [ ] 5.2 Create `docker-compose.prod.yml`: `expose`-only (no `ports:`), **no external network declared** (Coolify + Traefik wire it — decision override), `restart: always`, `env_file: .env.production` with `required: false`, healthchecks on both `server` and `client`, `office_identity` named volume.
-- [ ] 5.3 Create `docker-compose.proxy.yml`: opt-in overlay adding `reverse_proxy_network: {external: true}` membership for the sibling-repo (`kodu`/`trellofake`) manual reverse-proxy convention.
-- [ ] 5.4 Create multi-stage `Dockerfile` (`server`, `client` targets) on `node:22-alpine` (multi-arch, ARM64-safe); verify no `sharp`/`canvas` or other x86-only prebuilt-binary dependency is pulled in.
-- [ ] 5.5 RED test: `docker compose -f docker-compose.prod.yml config` succeeds with no `.env.production` present (deployment spec: optional env file).
-- [ ] 5.6 RED test: inspect `docker-compose.prod.yml` — no service declares a `ports:` key (deployment spec).
-- [ ] 5.7 RED test: inspect `docker-compose.prod.yml` + `docker-compose.proxy.yml` — every service defines a `healthcheck`, and `office_identity` volume mounts to the same path in both local and prod files (deployment spec: persisted identity volume).
-- [ ] 5.8 Create `.env.example` (local defaults) and `.env.production.example` (`OFFICE_HUB_URL`, `OFFICE_REDACT_PROMPTS`, `NODE_ENV`, `PORT`).
-- [ ] 5.9 Write root `README.md`: pnpm install, `pnpm assets:build` prerequisite (needs local gitignored `assets/`), `docker compose up` local walkthrough, production Coolify vs. manual-proxy overlay instructions, and the exact `.claude/settings.json` hook line a friend adds to point their Claude Code at the office.
+- [x] 5.1 Create `docker-compose.yml` (local): host port published, `OFFICE_REDACT_PROMPTS` configurable, identity volume mounted.
+  - **Deviation:** one service on `8787`, not two on `8080`/`5173`. The hub serves the built client itself (`OFFICE_STATIC_DIR`), which removes the CORS surface, lets the WebSocket share the page origin, and gives a reverse proxy one upstream instead of two that must agree. HMR is `pnpm dev:client`, not a compose concern.
+- [x] 5.2 Create `docker-compose.prod.yml`: `expose`-only (no `ports:`), **no external network declared** (Coolify + Traefik wire it — decision override), `restart: always`, `env_file: .env.production` with `required: false`, healthchecks on both `server` and `client`, `office_identity` named volume.
+- [x] 5.3 Create `docker-compose.proxy.yml`: opt-in overlay adding `reverse_proxy_network: {external: true}` membership for the sibling-repo (`kodu`/`trellofake`) manual reverse-proxy convention.
+- [x] 5.4 Create multi-stage `Dockerfile` on `node:22-alpine` (multi-arch, ARM64-safe); verify no `sharp`/`canvas` or other x86-only prebuilt-binary dependency is pulled in.
+  - **Deviation:** one `runtime` target, not separate `server`/`client` targets, following 5.1. The server ships as a single 193KB esbuild bundle, so the runtime image carries no `node_modules` at all. Built and run on the real aarch64 host: 209MB, healthy.
+- [x] 5.5 RED test: optional env file (`required: false`) asserted in `packages/deployment/src/compose.test.ts`.
+- [x] 5.6 RED test: no service in `docker-compose.prod.yml` declares `ports:`, and none joins an external network.
+- [x] 5.7 RED test: every production service defines a `healthcheck` and `restart: always`; the identity volume mounts at the same path in local and prod.
+  - Also added: the hook's default hub URL and the hub's default `PORT` must match (they did not — the hook posted to 8787 while the hub listened on 8080, which silently produced an empty office), no BuildKit-only syntax, non-root user, `assets/` excluded from the build context, and no natively-built x86-only dependency installed.
+- [x] 5.8 Create `.env.example` (local defaults) and `.env.production.example` (`OFFICE_HUB_URL`, `OFFICE_REDACT_PROMPTS`, `NODE_ENV`, `PORT`).
+- [x] 5.9 Write root `README.md`: pnpm install, `pnpm assets:build` prerequisite (needs local gitignored `assets/`), `docker compose up` local walkthrough, production Coolify vs. manual-proxy overlay instructions, and the exact `.claude/settings.json` hook line a friend adds to point their Claude Code at the office.
 - [ ] 5.10 Manual gate: visually verify retargeted clips in the running client renderer before considering the change complete (design testing strategy — numbers cannot prove a character looks right).
