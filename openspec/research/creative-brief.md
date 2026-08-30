@@ -8,6 +8,15 @@ The rule that governs every feature below: **the office is funny because it is h
 Every gag is driven by a real event from a real session. Nothing is random. When a character
 sprints for the exit, somebody really did type something alarming.
 
+## Props note
+
+Every prop named in this brief was verified to exist in `assets/office/kenneykit` as a `.glb`:
+`desk`, `deskCorner`, `chairDesk`, `computerScreen`, `computerKeyboard`, `laptop`,
+`kitchenCoffeeMachine`, `loungeSofa`, `loungeSofaCorner`, `loungeChairRelax`, `tableCoffee`,
+`wall`, `wallWindow`, `wallDoorway`, `doorwayOpen`, `floorFull`, `pottedPlant`, `plantSmall1`,
+`bookcaseOpen`, `trashcan`, `lampSquareFloor`, `rugRectangle`, `stoolBar`, `kitchenBar`,
+`televisionModern`, `cardboardBoxOpen`, `bear`, `ceilingFan`.
+
 ## Cast
 
 52 character skins ship in the asset pack. The role classifier picks one from the tool or
@@ -32,8 +41,9 @@ prompt that triggered the event, so the office reads at a glance.
 
 An isometric diorama on a 1x1m grid, furnished from the 140 Kenney props. Desks with chairs
 that have a seat socket the character aligns to. A lounge with couches. A kitchen with a
-coffee machine. A meeting room with a whiteboard. An elevator that dings on arrival, and a
-fire exit that only ever gets used for one reason.
+coffee machine. A meeting room with a delegation screen (`televisionModern`, since the kit ships no
+whiteboard). An elevator that dings on arrival, and a fire exit that only ever gets used for
+one reason.
 
 ## Behaviour, in ascending order of ridiculousness
 
@@ -46,9 +56,10 @@ quiet for 15 minutes fall asleep at the desk before fading out.
 coffee counter runs in the HUD. Nobody asked for this leaderboard; it is the most-watched
 number in the app.
 
-**Rubber duck debugging.** Three consecutive failing `Bash` exits and the character stands
-up, walks to the duck on the windowsill, and explains the problem to it with
-`Idle_Talking_Loop`. If the next command succeeds, it bows to the duck.
+**Teddy bear debugging.** The Kenney kit has no rubber duck, but it does have `bear`. Three
+consecutive failing `Bash` exits and the character stands up, walks to the bear on the
+windowsill, and explains the problem to it with `Idle_Talking_Loop`. If the next command
+succeeds, it bows to the bear. The bear is never acknowledged by anyone else.
 
 **The merge conflict duel.** Two sessions editing the same file inside the same window walk
 to the centre of the floor and fight it out with `Sword_Regular_Combo`. The one whose write
@@ -87,7 +98,7 @@ working gets a desk lamp. Weekend sessions get it too, with a slightly sadder la
 - `moo` spawns the cow.
 - Clicking the coffee machine five times makes every character stop and stare at you.
 - A character that has been idle for a very long time starts `Idle_TalkingPhone_Loop`.
-- The whiteboard in the meeting room shows the last delegated subagent task, verbatim.
+- The delegation screen in the meeting room shows the last delegated subagent task, verbatim.
 - One in a thousand spawns arrives as `Cowboy_Male`. No trigger, no explanation, no repeat.
 
 ## Non-goals
