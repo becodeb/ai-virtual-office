@@ -227,7 +227,15 @@ function alternativesNear(cell) {
     .sort((a, b) => Math.hypot(a[0] - cell[0], a[1] - cell[1]) - Math.hypot(b[0] - cell[0], b[1] - cell[1]));
 }
 
-function tryPlace([cell, prop, facing, offset, y], { allowCorridor = false, relocate = false } = {}) {
+function tryPlace([cell, prop, facing, offset, y], { allowCorridor = false, relocate = false, skipOccupied = false } = {}) {
+  if (skipOccupied && (solid.has(key(cell)) || reserved.has(key(cell)))) {
+    // Edge panels are 0.03 thick and read as a thin dark line seen almost
+    // edge-on. Stacked onto a cell that already holds a desk or a seat, that
+    // line cuts straight through whoever is sitting there and reads as a
+    // stretched limb rather than as a wall.
+    dropped.push(`${prop} at ${key(cell)}: cell already furnished`);
+    return;
+  }
   const candidates = relocate ? [cell, ...alternativesNear(cell)] : [cell];
   for (const candidate of candidates) {
     const reason = rejectReason(candidate, allowCorridor);
@@ -248,7 +256,7 @@ function tryPlace([cell, prop, facing, offset, y], { allowCorridor = false, relo
 // sparse room is what makes a floor look unfinished.
 for (const item of solidProps) tryPlace(item, { relocate: true });
 // Edge panels hug the outer boundary, so they never obstruct circulation.
-for (const item of edgePanels) tryPlace(item, { allowCorridor: true });
+for (const item of edgePanels) tryPlace(item, { allowCorridor: true, skipOccupied: true });
 for (const [cell, prop] of rugs) decor.push({ cell, prop, facing: 'north', offset: [0, 0], flat: true });
 
 if (!everythingReachable(solid)) {

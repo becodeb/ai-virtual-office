@@ -51,6 +51,32 @@ export interface BakeResult {
 }
 
 /**
+ * Lifts a source material colour out of the near-black range it arrives in.
+ *
+ * Measured across the pack, every material reads far darker than it should:
+ * `Skin` is #030303, `Hair` #1b0c06, `Pants` #110d09 — and `emissive` is
+ * byte-identical to `color` on every single one, which is the signature of a
+ * colour that has been through an sRGB-to-linear conversion it did not need.
+ * Written straight into a linear COLOR_0 attribute, characters render as black
+ * silhouettes: the arms in particular read as broken spikes rather than limbs,
+ * because there is no shading left in them to read as a shape.
+ *
+ * Undoing that conversion recovers the authored values. The floor is set well
+ * above zero as well, because a stylised character with a pure-black limb has
+ * no silhouette against a lit floor no matter how the rest is graded.
+ */
+export function liftSourceColour(source: THREE.Color): THREE.Color {
+  const lifted = source.clone().convertLinearToSRGB();
+  const FLOOR = 0.18;
+  lifted.setRGB(
+    FLOOR + lifted.r * (1 - FLOOR),
+    FLOOR + lifted.g * (1 - FLOOR),
+    FLOOR + lifted.b * (1 - FLOOR)
+  );
+  return lifted;
+}
+
+/**
  * Bakes each material group's flat colour into a `color` (COLOR_0) vertex
  * attribute and writes the matching `_slot` index (that group's material
  * index), using the geometry's existing (pre-merge) `.groups`. Must run
@@ -67,7 +93,8 @@ export function bakeVertexColorsAndSlots(geometry: THREE.BufferGeometry, materia
     const slotIndex = group.materialIndex ?? 0;
     const material = materials[slotIndex];
     if (!material) throw new Error(`optimize: group references missing materialIndex ${slotIndex}`);
-    const color = (material as THREE.MeshPhongMaterial | THREE.MeshStandardMaterial).color ?? new THREE.Color(1, 1, 1);
+    const source = (material as THREE.MeshPhongMaterial | THREE.MeshStandardMaterial).color ?? new THREE.Color(1, 1, 1);
+    const color = liftSourceColour(source);
 
     for (let v = group.start; v < group.start + group.count; v++) {
       colorArray[v * 3] = color.r;

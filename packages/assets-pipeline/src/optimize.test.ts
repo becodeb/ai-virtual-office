@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import {
   TARGET_STANDING_HEIGHT,
+  liftSourceColour,
   assertSlotColorConsistency,
   bakeVertexColorsAndSlots,
   collapseGroups,
@@ -56,8 +57,16 @@ describe('bakeVertexColorsAndSlots', () => {
     const color = geometry.attributes['color']!;
     expect(slot.getX(0)).toBe(0); // Skin is materials[0]
     expect(slot.getX(6)).toBe(1); // Shirt is materials[1]
-    expect(color.getX(0)).toBeCloseTo(1, 5); // Skin is red -> r=1
-    expect(color.getX(6)).toBeCloseTo(0, 5); // Shirt is blue -> r=0
+    // Colours are lifted out of the pack's near-black range on the way in
+    // (see `liftSourceColour`), so compare against the lift rather than the raw
+    // material value — but the hue must survive: red stays red, blue stays blue.
+    const red = liftSourceColour(new THREE.Color(1, 0, 0));
+    const blue = liftSourceColour(new THREE.Color(0, 0, 1));
+    expect(color.getX(0)).toBeCloseTo(red.r, 5);
+    expect(color.getZ(0)).toBeCloseTo(red.b, 5);
+    expect(color.getX(0)).toBeGreaterThan(color.getZ(0)); // still red
+    expect(color.getZ(6)).toBeCloseTo(blue.b, 5);
+    expect(color.getZ(6)).toBeGreaterThan(color.getX(6)); // still blue
   });
 
   it('accepts arbitrary material names — real skins do not share one fixed slot palette', () => {
@@ -167,5 +176,39 @@ describe('scaleClipPositionTracks', () => {
     [0, 0.9, 0, 0, 0.95, 0].forEach((expected, i) => expect(scaled[i]).toBeCloseTo(expected, 5));
     expect(Array.from(otherPosTrack.values)).toEqual([1, 1, 1, 1, 1, 1]); // untouched — not in boneNames
     expect(Array.from(quatTrack.values)).toEqual([0, 0, 0, 1, 0, 0, 0, 1]); // untouched — not a position track
+  });
+});
+
+describe('liftSourceColour', () => {
+  /**
+   * Regression: the pack's materials arrive near-black (`Skin` #030303) with
+   * `emissive` byte-identical to `color` — a colour that has been through an
+   * sRGB-to-linear conversion it did not need. Baked straight into COLOR_0 the
+   * characters render as silhouettes, and their arms read as broken spikes
+   * rather than limbs.
+   */
+  it('rescues a near-black source colour into something visible', () => {
+    const skin = liftSourceColour(new THREE.Color(3 / 255, 3 / 255, 3 / 255));
+    expect(skin.r, 'skin is still effectively black').toBeGreaterThan(0.2);
+  });
+
+  it('never leaves any channel at zero, so nothing renders as a silhouette', () => {
+    const black = liftSourceColour(new THREE.Color(0, 0, 0));
+    expect(Math.min(black.r, black.g, black.b)).toBeGreaterThan(0.1);
+  });
+
+  it('keeps bright colours bright and preserves their ordering', () => {
+    const dark = liftSourceColour(new THREE.Color(0.05, 0.05, 0.05));
+    const mid = liftSourceColour(new THREE.Color(0.4, 0.4, 0.4));
+    const bright = liftSourceColour(new THREE.Color(1, 1, 1));
+    expect(dark.r).toBeLessThan(mid.r);
+    expect(mid.r).toBeLessThan(bright.r);
+    expect(bright.r).toBeLessThanOrEqual(1);
+  });
+
+  it('preserves hue: a blue shirt does not come back grey', () => {
+    const shirt = liftSourceColour(new THREE.Color(0x11 / 255, 0x1b / 255, 0x2f / 255));
+    expect(shirt.b).toBeGreaterThan(shirt.r);
+    expect(shirt.b).toBeGreaterThan(shirt.g);
   });
 });
