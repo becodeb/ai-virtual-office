@@ -22,6 +22,7 @@ import type { FloorLayout } from '../net/floorLayout.js';
 import { useWorldStore } from '../state/store.js';
 import { useRecentFx } from '../state/useRecentFx.js';
 import { AGENT_MOVE_CELLS_PER_SEC, resolveAgentTarget } from './agentTarget.js';
+import { sampleWalk } from './walkPath.js';
 import { effectiveDisplayRole } from './effectiveDisplay.js';
 import { applyPaletteTint, paletteColorForMachine, pickTintSlotName } from './rolePalette.js';
 import { AgentLabel } from '../hud/Label.js';
@@ -99,6 +100,7 @@ export function Agent({ agent, layout, desks, clips, manifestSkin, redactPrompts
 
   // One-shot P1 clip cues (`agent_anim` deltas — bear talk/bow) briefly override the state-driven clip.
   const animCues = useWorldStore((s) => s.animCues);
+  const paths = useWorldStore((s) => s.paths);
   const [overrideClip, setOverrideClip] = useState<string | null>(null);
   const lastCueIdRef = useRef(0);
 
@@ -153,6 +155,31 @@ export function Agent({ agent, layout, desks, clips, manifestSkin, redactPrompts
 
   useFrame((_, delta) => {
     mixerRef.current?.update(delta);
+
+    // Replay the hub's own route when it sent one. The character then walks the
+    // same way the pathfinder planned — around the furniture rather than
+    // through it — and, just as visibly, turns to face where it is going
+    // instead of holding the direction of the chair it is heading for.
+    const path = paths.get(agent.agentId);
+    if (path !== undefined && path.cells.length > 1) {
+      const walked = sampleWalk(
+        path.cells,
+        path.speed,
+        (Date.now() - path.startedAt) / 1000,
+        target.facingRad
+      );
+      if (walked !== null && !walked.arrived) {
+        // On foot the character stands on the floor; the seat height only applies once seated.
+        currentPos.current.set(walked.position.x, 0, walked.position.z);
+        currentFacing.current = lerpAngle(currentFacing.current, walked.facingRad, Math.min(1, delta * 10));
+        const walkingGroup = groupRef.current;
+        if (walkingGroup !== null) {
+          walkingGroup.position.copy(currentPos.current);
+          walkingGroup.rotation.y = currentFacing.current;
+        }
+        return;
+      }
+    }
 
     const targetVec = new THREE.Vector3(target.position.x, target.position.y, target.position.z);
     const distance = currentPos.current.distanceTo(targetVec);

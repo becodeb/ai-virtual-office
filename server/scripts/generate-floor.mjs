@@ -137,16 +137,24 @@ for (let x = 0; x <= 10; x++) {
   }
 }
 
-/** Rugs are 0.01 tall: walked over, never around, so they may cover corridors. */
+/**
+ * Rugs are 0.01 tall: walked over, never around.
+ *
+ * Runners down the full length of both corridors matter as much as the ones in
+ * the rooms. A bare corridor reads as the gap between two places; a carpeted
+ * one reads as the hallway that joins them, which is the difference between
+ * four rooms in a building and four islands in a field.
+ */
 const rugs = [
   [[2, 1], 'rugRectangle'],
   [[2, 5], 'rugRounded'],
   [[8, 5], 'rugRounded'],
   [[9, 4], 'rugSquare'],
-  [[5, 3], 'rugSquare'],
-  [[5, 5], 'rugDoormat'],
   [[7, 1], 'rugSquare'],
+  [[1, 4], 'rugSquare'],
 ];
+for (let y = 0; y < H; y++) rugs.push([[AISLE_X, y], 'rugSquare']);
+for (let x = 0; x < W; x++) if (x !== AISLE_X) rugs.push([[x, AISLE_Y], 'rugSquare']);
 
 const key = (c) => `${c[0]},${c[1]}`;
 const seats = new Set([...desks.map((d) => key(d.seatCell)), ...lounge.map((s) => key(s.cell))]);
@@ -192,32 +200,53 @@ const reserved = new Set([...Object.values(fixed).map(key), ...seats]);
 const decor = [];
 const dropped = [];
 
-function tryPlace([cell, prop, facing, offset, y], { allowCorridor = false } = {}) {
+/** Why `cell` cannot take a solid prop, or `null` if it can. */
+function rejectReason(cell, allowCorridor) {
   const k = key(cell);
+  if (cell[0] < 0 || cell[0] > W - 1 || cell[1] < 0 || cell[1] > H - 1) return 'is off the floor';
   const corridor = isCorridor(cell);
-  if (!allowCorridor && corridor !== null) {
-    dropped.push(`${prop} at ${k}: stands in ${corridor}`);
-    return;
-  }
-  if (reserved.has(k)) {
-    dropped.push(`${prop} at ${k}: cell is reserved for a fixture or a seat`);
-    return;
-  }
-  const entry = { cell, prop, facing, offset };
-  if (y !== undefined) entry.y = y;
-  if (solid.has(k)) {
-    decor.push(entry); // stacking onto an already-solid cell builds the counter run
-    return;
-  }
-  if (!everythingReachable(new Set([...solid, k]))) {
-    dropped.push(`${prop} at ${k}: would seal off part of the floor`);
-    return;
-  }
-  solid.add(k);
-  decor.push(entry);
+  if (!allowCorridor && corridor !== null) return `stands in ${corridor}`;
+  if (reserved.has(k)) return 'cell is reserved for a fixture or a seat';
+  if (solid.has(k)) return null; // stacking builds the counter run
+  if (!everythingReachable(new Set([...solid, k]))) return 'would seal off part of the floor';
+  return null;
 }
 
-for (const item of solidProps) tryPlace(item);
+/** Cells of the zone containing `cell`, nearest first — where to look for a second chance. */
+function alternativesNear(cell) {
+  const zone = zones.find(
+    (z) => cell[0] >= z.rect[0] && cell[0] <= z.rect[2] && cell[1] >= z.rect[1] && cell[1] <= z.rect[3]
+  );
+  if (zone === undefined) return [];
+  const out = [];
+  for (let x = zone.rect[0]; x <= zone.rect[2]; x++) {
+    for (let y = zone.rect[1]; y <= zone.rect[3]; y++) out.push([x, y]);
+  }
+  return out
+    .filter((c) => key(c) !== key(cell))
+    .sort((a, b) => Math.hypot(a[0] - cell[0], a[1] - cell[1]) - Math.hypot(b[0] - cell[0], b[1] - cell[1]));
+}
+
+function tryPlace([cell, prop, facing, offset, y], { allowCorridor = false, relocate = false } = {}) {
+  const candidates = relocate ? [cell, ...alternativesNear(cell)] : [cell];
+  for (const candidate of candidates) {
+    const reason = rejectReason(candidate, allowCorridor);
+    if (reason !== null) continue;
+    const entry = { cell: candidate, prop, facing, offset };
+    if (y !== undefined) entry.y = y;
+    if (!solid.has(key(candidate))) solid.add(key(candidate));
+    decor.push(entry);
+    if (key(candidate) !== key(cell)) {
+      dropped.push(`${prop}: moved from ${key(cell)} to ${key(candidate)} (${rejectReason(cell, allowCorridor)})`);
+    }
+    return;
+  }
+  dropped.push(`${prop} at ${key(cell)}: ${rejectReason(cell, allowCorridor) ?? 'no room anywhere in its zone'}`);
+}
+
+// Room furniture may shuffle within its own room rather than be dropped: a
+// sparse room is what makes a floor look unfinished.
+for (const item of solidProps) tryPlace(item, { relocate: true });
 // Edge panels hug the outer boundary, so they never obstruct circulation.
 for (const item of edgePanels) tryPlace(item, { allowCorridor: true });
 for (const [cell, prop] of rugs) decor.push({ cell, prop, facing: 'north', offset: [0, 0], flat: true });

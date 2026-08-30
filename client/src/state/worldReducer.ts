@@ -23,6 +23,14 @@ export interface AgentAnimCue {
   receivedAt: number;
 }
 
+/** One broadcast A* route, with the wall-clock moment the client began walking it. */
+export interface AgentPath {
+  cells: ReadonlyArray<readonly [number, number]>;
+  /** Cells per second, matching the hub's own estimate. */
+  speed: number;
+  startedAt: number;
+}
+
 export interface WorldReducerState {
   /** `true` once the server's `hello` handshake has been received and accepted. */
   helloReceived: boolean;
@@ -45,6 +53,8 @@ export interface WorldReducerState {
   nextFxId: number;
   /** Ephemeral per-agent clip cues from `agent_anim` ops (P1 bear talk/bow). Newest last. */
   animCues: AgentAnimCue[];
+  /** The route the hub actually planned per walking agent, keyed by agent id. */
+  paths: Map<string, AgentPath>;
   nextAnimCueId: number;
 }
 
@@ -65,6 +75,7 @@ export function initialWorldReducerState(): WorldReducerState {
     fx: [],
     nextFxId: 1,
     animCues: [],
+    paths: new Map(),
     nextAnimCueId: 1,
   };
 }
@@ -80,6 +91,7 @@ function applyOps(state: WorldReducerState, ops: DeltaOp[]): void {
         break;
       case 'agent_remove':
         state.agents.delete(op.agentId);
+        state.paths.delete(op.agentId);
         break;
       case 'agent_state': {
         const agent = state.agents.get(op.agentId);
@@ -99,9 +111,7 @@ function applyOps(state: WorldReducerState, ops: DeltaOp[]): void {
         if (state.animCues.length > MAX_FX_HISTORY) state.animCues.splice(0, state.animCues.length - MAX_FX_HISTORY);
         break;
       case 'agent_path':
-        // Not currently emitted by the hub (see net/useWorld.ts's movement
-        // interpolation notes) — applying it here keeps this reducer forward
-        // compatible if that changes.
+        state.paths.set(op.agentId, { cells: op.cells, speed: op.speed, startedAt: Date.now() });
         break;
       case 'desk':
         state.desks.set(op.deskId, op.occupiedBy);
@@ -138,7 +148,9 @@ export function applyServerFrame(state: WorldReducerState, frame: ServerFrame, n
       const layout = isFloorLayout(frame.world.layout) ? frame.world.layout : state.layout;
       const desks = new Map(frame.world.desks.map((d) => [d.deskId, d.occupiedBy] as const));
       const agents = new Map(frame.world.agents.map((a) => [a.agentId, a] as const));
-      return { ...state, seq: frame.seq, layout, desks, agents, npcs: frame.world.npcs, hud: frame.world.hud, fx: state.fx, nextFxId: state.nextFxId };
+      // A fresh snapshot says nothing about routes in flight; keeping the old
+      // ones would walk characters along paths the hub has already forgotten.
+      return { ...state, seq: frame.seq, layout, desks, agents, npcs: frame.world.npcs, hud: frame.world.hud, fx: state.fx, nextFxId: state.nextFxId, paths: new Map() };
     }
     case 'delta': {
       const next: WorldReducerState = {

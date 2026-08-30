@@ -106,6 +106,8 @@ export class OfficeHub {
   private readonly clients = new Map<WebSocket, ClientConn>();
   private readonly lastAgentSnapshots = new Map<string, AgentSnapshot>();
   private readonly lastDeskOccupancy = new Map<string, string | null>();
+  /** Identity of the last path broadcast per agent, so an unchanged walk is not re-sent every tick. */
+  private readonly lastPathKey = new Map<string, string>();
   /** Latest HUD payload, refreshed from the tick and broadcast when it changes. */
   private hud: unknown = {};
   private lastHudJson = '{}';
@@ -237,7 +239,7 @@ export class OfficeHub {
 
   /** Recomputes deltas since the last call and broadcasts them. Call once per server tick. */
   publishDeltas(): DeltaOp[] {
-    const ops = [...this.diffAgents(), ...this.diffDesks(), ...this.diffHud()];
+    const ops = [...this.diffAgents(), ...this.diffPaths(), ...this.diffDesks(), ...this.diffHud()];
     if (ops.length === 0) return ops;
     const entry = this.ring.push(ops);
     const frame: ServerFrame = { t: 'delta', seq: entry.seq, ops };
@@ -267,6 +269,38 @@ export class OfficeHub {
     if (this.lastHudJson === this.lastBroadcastHudJson) return [];
     this.lastBroadcastHudJson = this.lastHudJson;
     return [{ op: 'hud', hud: this.hud }];
+  }
+
+  /**
+   * Emits the A* route the hub actually planned.
+   *
+   * Without it the client only learns that an agent is WALKING and has to guess
+   * where to: it lerps in a straight line, through furniture, and has nothing
+   * to turn the character towards — so people slide across the office facing
+   * whichever way they will eventually sit, which reads as walking backwards.
+   */
+  private diffPaths(): DeltaOp[] {
+    const ops: DeltaOp[] = [];
+    for (const agent of this.world.agents.values()) {
+      const movement = agent.movement;
+      const key =
+        movement === null
+          ? ''
+          : `${movement.arrivesAt}:${movement.cells.map((c) => `${c[0]},${c[1]}`).join('|')}`;
+      if (this.lastPathKey.get(agent.agentId) === key) continue;
+      this.lastPathKey.set(agent.agentId, key);
+      if (movement === null) continue;
+      ops.push({
+        op: 'agent_path',
+        agentId: agent.agentId,
+        cells: movement.cells.map((c) => [c[0], c[1]] as [number, number]),
+        speed: movement.speed,
+      });
+    }
+    for (const id of Array.from(this.lastPathKey.keys())) {
+      if (!this.world.agents.has(id)) this.lastPathKey.delete(id);
+    }
+    return ops;
   }
 
   private diffAgents(): DeltaOp[] {
