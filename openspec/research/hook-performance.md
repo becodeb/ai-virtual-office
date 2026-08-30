@@ -42,7 +42,7 @@ Properties this shape gets for free:
 
 ## Fallback
 
-`hooks/office-hook.js` (Node, zero dependencies) ships alongside for machines without `curl`.
+`hooks/office-hook.cjs` (Node, zero dependencies) ships alongside for machines without `curl`.
 The example `.claude/settings.json` wires the shell version by default and documents the swap
 in one line. curl 8.14.1 is present on this host; Windows 10+ ships `curl.exe`, so the fallback
 is genuinely an edge case rather than the common path.

@@ -19,6 +19,13 @@
  *
  * Imports are restricted to Node builtins. This file has no dependencies and
  * must never acquire any.
+ *
+ * The `.cjs` extension is deliberate and load-bearing. This file gets copied
+ * into other people's projects, where whatever `package.json` happens to sit
+ * above it decides whether `.js` means CommonJS or ESM. Under `"type":
+ * "module"` a `.js` copy dies on the first `require` with a stack trace on
+ * stderr and exit 1 - precisely the two things this hook must never do.
+ * `.cjs` means CommonJS everywhere, regardless of its surroundings.
  */
 
 'use strict';

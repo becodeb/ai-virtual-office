@@ -47,10 +47,10 @@ usually runs on a monitor other people can see.
 `office-hook.sh` is the default and what you want. It is POSIX `sh` plus `curl`, measured at
 **6 ms** per invocation.
 
-`office-hook.js` is a fallback for hosts without `curl`. It is correct and equally safe, but
+`office-hook.cjs` is a fallback for hosts without `curl`. It is correct and equally safe, but
 **44 ms** per invocation — almost entirely Node's own process startup, which no amount of
 optimisation recovers. On a busy session that is hundreds of invocations, so prefer the shell
-version unless you cannot run it. Swap the `command` value in your settings to the `.js` path.
+version unless you cannot run it. Swap the `command` value in your settings to the `.cjs` path.
 
 ## What this can and cannot do to your session
 
