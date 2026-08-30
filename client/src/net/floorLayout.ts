@@ -48,6 +48,8 @@ export interface FloorLayout {
   desks: DeskLayout[];
   loungeSeats: SeatSocket[];
   /** Cosmetic furniture; blocks its cell server-side but is purely visual here. */
+  walls: boolean;
+  zones: Array<{ id: string; rect: readonly [number, number, number, number]; tint: string }>;
   decor: Array<{
     cell: Cell;
     prop: string;

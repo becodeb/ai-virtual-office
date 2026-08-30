@@ -1,19 +1,24 @@
 /**
  * Generates `src/world/floor.json`.
  *
- * The floor plan is not hand-written JSON. Hand-placing furniture sealed the
- * elevator into a pocket three times in a row, and each time it looked fine
- * until a character had nowhere to walk. Here every solid prop is accepted only
- * if the floor is still fully connected afterwards, and rejected items are
- * printed with the reason.
+ * The plan is four rooms around a cross of corridors, filling the grid edge to
+ * edge. An earlier version reserved an unused ring around the outside, which is
+ * what produced the wide band of bare floor with nothing on it: the rooms were
+ * fine, the map was simply bigger than its own contents.
  *
- * The connectivity check is deliberately stricter than the game's own A*: it is
- * 4-connected and never routes through a seat, while `findPath` is 8-connected.
- * Anything that passes here passes there. `src/world/reachability.test.ts` then
- * re-checks the committed result with the real pathfinder, so this script can
- * never be the only opinion that matters.
+ * Rooms are told apart by the colour of the floor underfoot, not by walls. From
+ * a camera looking down at a diorama that is the strongest signal available,
+ * and unlike full-height walls it hides nothing. `paneling` (0.59 tall against
+ * 0.85 characters) lines the outer edges to give each room a lip you can see
+ * over.
  *
- *   node scripts/generate-floor.mjs
+ * Every solid prop is accepted only if the floor is still fully connected
+ * afterwards; rejects are printed with a reason. The check is 4-connected and
+ * never routes through a seat, which is stricter than the game's 8-connected
+ * A*, so anything passing here passes there. `src/world/reachability.test.ts`
+ * re-checks the committed result with the real pathfinder.
+ *
+ *   pnpm --filter server floor
  */
 import { writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -22,80 +27,125 @@ import { fileURLToPath } from 'node:url';
 const OUT = join(dirname(fileURLToPath(import.meta.url)), '../src/world/floor.json');
 
 const W = 11;
-const H = 8; // interior is 1..W-2 by 1..H-2
+const H = 7; // the whole grid is used: cells 0..10 by 0..6
 
-/** Two banks of three desks either side of a central aisle. */
-const desks = [
-  ...[2, 3, 4].map((y, i) => ({ id: `D${i + 1}`, cell: [2, y], seatCell: [3, y], facing: 'west', window: y === 2 })),
-  ...[2, 3, 4].map((y, i) => ({ id: `D${i + 4}`, cell: [6, y], seatCell: [5, y], facing: 'east', window: y === 2 })),
+/** The cross of circulation that separates the four rooms. */
+const AISLE_X = 5;
+const AISLE_Y = 3;
+
+const zones = [
+  { id: 'work', rect: [0, 0, 4, 2], tint: '#a8825e' },
+  { id: 'kitchen', rect: [6, 0, 10, 2], tint: '#bfb6a4' },
+  { id: 'meeting', rect: [0, 4, 4, 6], tint: '#9a7a52' },
+  { id: 'lounge', rect: [6, 4, 10, 6], tint: '#8f6a55' },
 ];
 
-/** Lounge seats face the television across a coffee table. */
+/** Work bay: two banks of three either side of their own short aisle. */
+const desks = [
+  ...[0, 1, 2].map((y, i) => ({ id: `D${i + 1}`, cell: [0, y], seatCell: [1, y], facing: 'west', window: y === 0 })),
+  ...[0, 1, 2].map((y, i) => ({ id: `D${i + 4}`, cell: [4, y], seatCell: [3, y], facing: 'east', window: y === 0 })),
+];
+
+/** Lounge seats face the television across the coffee table. */
 const lounge = [
-  { cell: [6, 6], facing: 'east' },
-  { cell: [7, 6], facing: 'east' },
+  { cell: [8, 4], facing: 'east' },
+  { cell: [8, 5], facing: 'east' },
+  { cell: [8, 6], facing: 'east' },
 ];
 
 const fixed = {
-  elevator: [1, 3],
-  fireExit: [9, 3],
-  coffee: [8, 1],
-  coffeeStand: [8, 2],
-  screen: [1, 6],
-  bear: [1, 1],
-  bearStand: [2, 1],
-  architect: [9, 5],
+  elevator: [5, 6],
+  fireExit: [5, 0],
+  coffee: [6, 0],
+  coffeeStand: [6, 1],
+  screen: [0, 4],
+  bear: [0, 6],
+  bearStand: [1, 6],
+  architect: [10, 6],
 };
 
-/** Circulation furniture may never stand in. */
 function isCorridor([x, y]) {
-  if (x === 4 && y >= 2 && y <= 4) return 'the work aisle';
-  if (y === 5) return 'the cross corridor';
-  if (x === 8 && y >= 2 && y <= 4) return 'the kitchen approach';
+  if (x === AISLE_X) return 'the main aisle';
+  if (y === AISLE_Y) return 'the cross corridor';
+  if (x === 2 && y <= 2) return 'the work bay aisle';
   return null;
 }
 
 // Kitchen units are 0.43 wide, so two sit side by side inside one 1.0 cell and
-// read as a continuous counter run.
+// read as one continuous counter run rather than separate cabinets.
 const L = -0.25;
 const R = 0.25;
 
 /** [cell, prop, facing, offset, y?] */
 const solidProps = [
-  [[6, 1], 'kitchenCabinet', 'south', [L, 0]],
-  [[6, 1], 'kitchenSink', 'south', [R, 0]],
-  [[6, 1], 'kitchenCabinetUpper', 'south', [L, -0.02], 0.62],
-  [[6, 1], 'toaster', 'south', [R, 0], 0.46],
-  [[7, 1], 'kitchenCabinetDrawer', 'south', [L, 0]],
-  [[7, 1], 'kitchenStove', 'south', [R, 0]],
-  [[7, 1], 'hoodModern', 'south', [R, -0.02], 0.62],
-  [[9, 1], 'kitchenFridge', 'south', [0, 0]],
+  // kitchen: a counter along the top edge, a breakfast bar facing into the room
+  [[7, 0], 'kitchenCabinetDrawer', 'south', [L, 0]],
+  [[7, 0], 'kitchenStove', 'south', [R, 0]],
+  [[7, 0], 'hoodModern', 'south', [R, -0.02], 0.62],
+  [[8, 0], 'kitchenSink', 'south', [L, 0]],
+  [[8, 0], 'kitchenCabinet', 'south', [R, 0]],
+  [[8, 0], 'kitchenCabinetUpper', 'south', [L, -0.02], 0.62],
+  [[8, 0], 'toaster', 'south', [R, 0], 0.46],
+  [[9, 0], 'kitchenCabinet', 'south', [L, 0]],
+  [[9, 0], 'kitchenMicrowave', 'south', [L, 0], 0.46],
+  [[10, 0], 'kitchenFridge', 'south', [0, 0]],
+  [[8, 2], 'kitchenBar', 'north', [0, 0]],
   [[9, 2], 'kitchenBar', 'north', [0, 0]],
-  [[9, 6], 'cabinetTelevision', 'west', [0, 0]],
-  [[9, 6], 'televisionModern', 'west', [0, 0], 0.31],
-  [[8, 6], 'tableCoffee', 'north', [0, 0]],
-  [[5, 6], 'loungeSofaOttoman', 'east', [0, 0]],
-  [[9, 4], 'lampRoundFloor', 'west', [0, 0]],
-  [[2, 6], 'tableRound', 'north', [0, 0]],
-  [[3, 6], 'chairRounded', 'west', [0, 0]],
-  [[1, 2], 'bookcaseOpen', 'east', [0, 0]],
-  [[1, 4], 'bookcaseClosed', 'east', [0, 0]],
-  [[7, 2], 'trashcan', 'north', [0, 0]],
-  [[4, 6], 'cardboardBoxOpen', 'north', [0, 0]],
-  [[2, 2], 'radio', 'east', [0, 0], 0.39],
-  [[7, 4], 'plantSmall1', 'north', [0, 0]],
+  [[10, 1], 'stoolBar', 'west', [0, 0]],
+  [[10, 2], 'plantSmall1', 'north', [0, 0]],
+
+  // lounge: television against the far edge, seating turned towards it
+  [[10, 5], 'cabinetTelevision', 'west', [0, 0]],
+  [[10, 5], 'televisionModern', 'west', [0, 0], 0.31],
+  [[9, 5], 'tableCoffeeSquare', 'north', [0, 0]],
+  [[10, 4], 'lampRoundFloor', 'west', [0, 0]],
+  [[10, 6], 'speaker', 'west', [0, 0]],
+  [[7, 4], 'loungeDesignChair', 'east', [0, 0]],
+  [[7, 6], 'sideTableDrawers', 'east', [0, 0]],
+
+  // meeting nook: a round table with seating on three sides
+  [[2, 5], 'tableRound', 'north', [0, 0]],
+  [[1, 5], 'chairModernCushion', 'east', [0, 0]],
+  [[3, 5], 'chairModernCushion', 'west', [0, 0]],
+  [[2, 6], 'chairModernCushion', 'north', [0, 0]],
+  [[2, 4], 'benchCushion', 'south', [0, 0]],
+  [[0, 5], 'coatRackStanding', 'east', [0, 0]],
+  [[4, 4], 'bookcaseOpenLow', 'south', [0, 0]],
+  [[4, 6], 'pottedPlant', 'north', [0, 0]],
+  [[3, 6], 'plantSmall1', 'north', [0, 0]],
+
+  // work bay dressing, kept against the edges so the middle stays walkable
+  [[2, 0], 'bookcaseOpenLow', 'south', [0, 0]],
+  [[2, 2], 'trashcan', 'north', [0, 0]],
 ];
+
+/**
+ * Low panels along the outer edge. They give each room a lip without hiding
+ * anything: 0.59 tall against 0.85 characters. Two per cell, since one panel is
+ * half a cell wide.
+ */
+const edgePanels = [];
+for (let x = 0; x <= 10; x++) {
+  if (x === AISLE_X) continue; // the aisle runs out to the edge at both ends
+  for (const [y, facing] of [
+    [0, 'north'],
+    [6, 'south'],
+  ]) {
+    const push = y === 0 ? -0.47 : 0.47;
+    edgePanels.push([[x, y], 'paneling', facing, [L, push]]);
+    edgePanels.push([[x, y], 'paneling', facing, [R, push]]);
+  }
+}
 
 /** Rugs are 0.01 tall: walked over, never around, so they may cover corridors. */
 const rugs = [
-  [[4, 2], 'rugRectangle'],
-  [[4, 4], 'rugRectangle'],
-  [[2, 6], 'rugSquare'],
-  [[7, 6], 'rugRounded'],
-  [[1, 3], 'rugDoormat'],
-  [[8, 5], 'rugSquare'],
-  [[5, 5], 'rugRectangle'],
-  [[2, 5], 'rugSquare'],
+  [[2, 1], 'rugRectangle'],
+  [[2, 5], 'rugRounded'],
+  [[8, 5], 'rugRounded'],
+  [[9, 4], 'rugSquare'],
+  [[5, 3], 'rugSquare'],
+  [[5, 5], 'rugDoormat'],
+  [[7, 1], 'rugSquare'],
 ];
 
 const key = (c) => `${c[0]},${c[1]}`;
@@ -111,26 +161,29 @@ const destinations = [
   ...desks.map((d) => d.seatCell),
   ...lounge.map((s) => s.cell),
 ];
+const NEIGHBOURS = [
+  [1, 0],
+  [-1, 0],
+  [0, 1],
+  [0, -1],
+];
 
 function everythingReachable(solid) {
   const seen = new Set([key(fixed.elevator)]);
   const queue = [fixed.elevator];
   while (queue.length > 0) {
     const [x, y] = queue.shift();
-    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    for (const [dx, dy] of NEIGHBOURS) {
       const n = [x + dx, y + dy];
-      if (n[0] < 1 || n[0] > W - 2 || n[1] < 1 || n[1] > H - 2) continue;
+      if (n[0] < 0 || n[0] > W - 1 || n[1] < 0 || n[1] > H - 1) continue;
       const k = key(n);
       if (solid.has(k) || seen.has(k) || seats.has(k)) continue;
       seen.add(k);
       queue.push(n);
     }
   }
-  // A destination counts as reachable if it is standable, or adjacent to somewhere standable.
   return destinations.every(
-    (d) =>
-      seen.has(key(d)) ||
-      [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => seen.has(key([d[0] + dx, d[1] + dy])))
+    (d) => seen.has(key(d)) || NEIGHBOURS.some(([dx, dy]) => seen.has(key([d[0] + dx, d[1] + dy])))
   );
 }
 
@@ -139,61 +192,67 @@ const reserved = new Set([...Object.values(fixed).map(key), ...seats]);
 const decor = [];
 const dropped = [];
 
-for (const [cell, prop, facing, offset, y] of solidProps) {
+function tryPlace([cell, prop, facing, offset, y], { allowCorridor = false } = {}) {
   const k = key(cell);
   const corridor = isCorridor(cell);
-  if (corridor !== null) {
+  if (!allowCorridor && corridor !== null) {
     dropped.push(`${prop} at ${k}: stands in ${corridor}`);
-    continue;
+    return;
   }
   if (reserved.has(k)) {
     dropped.push(`${prop} at ${k}: cell is reserved for a fixture or a seat`);
-    continue;
+    return;
   }
   const entry = { cell, prop, facing, offset };
   if (y !== undefined) entry.y = y;
-  // Stacking onto an already-solid cell is how a counter run is built.
   if (solid.has(k)) {
-    decor.push(entry);
-    continue;
+    decor.push(entry); // stacking onto an already-solid cell builds the counter run
+    return;
   }
   if (!everythingReachable(new Set([...solid, k]))) {
     dropped.push(`${prop} at ${k}: would seal off part of the floor`);
-    continue;
+    return;
   }
   solid.add(k);
   decor.push(entry);
 }
 
-for (const [cell, prop] of rugs) {
-  decor.push({ cell, prop, facing: 'north', offset: [0, 0], flat: true });
-}
+for (const item of solidProps) tryPlace(item);
+// Edge panels hug the outer boundary, so they never obstruct circulation.
+for (const item of edgePanels) tryPlace(item, { allowCorridor: true });
+for (const [cell, prop] of rugs) decor.push({ cell, prop, facing: 'north', offset: [0, 0], flat: true });
 
 if (!everythingReachable(solid)) {
   console.error('generate-floor: the finished plan is not fully reachable — refusing to write it');
   process.exit(1);
 }
 
-const layout = {
-  width: W,
-  height: H,
-  walls: false,
-  elevatorCell: fixed.elevator,
-  fireExitCell: fixed.fireExit,
-  kitchen: { coffeeMachineCell: fixed.coffee, standCell: fixed.coffeeStand },
-  meetingRoom: { screenCell: fixed.screen },
-  bear: { cell: fixed.bear, standCell: fixed.bearStand },
-  architect: { cell: fixed.architect },
-  desks,
-  lounge: { seats: lounge },
-  decor,
-};
-
-writeFileSync(OUT, `${JSON.stringify(layout, null, 2)}\n`);
+writeFileSync(
+  OUT,
+  `${JSON.stringify(
+    {
+      width: W,
+      height: H,
+      walls: false,
+      zones,
+      elevatorCell: fixed.elevator,
+      fireExitCell: fixed.fireExit,
+      kitchen: { coffeeMachineCell: fixed.coffee, standCell: fixed.coffeeStand },
+      meetingRoom: { screenCell: fixed.screen },
+      bear: { cell: fixed.bear, standCell: fixed.bearStand },
+      architect: { cell: fixed.architect },
+      desks,
+      lounge: { seats: lounge },
+      decor,
+    },
+    null,
+    2
+  )}\n`
+);
 
 const covered = new Set([...solid, ...seats, ...decor.map((d) => key(d.cell))]).size;
 console.log(
-  `generate-floor: ${W}x${H} (${W * H} cells), ${desks.length} desks, ${decor.length} props, ` +
-    `${Math.round((100 * covered) / (W * H))}% of the floor covered`
+  `generate-floor: ${W}x${H} (${W * H} cells), ${zones.length} rooms, ${desks.length} desks, ` +
+    `${decor.length} props, ${Math.round((100 * covered) / (W * H))}% of the floor covered`
 );
 for (const line of dropped) console.log(`  dropped ${line}`);

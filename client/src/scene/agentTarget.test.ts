@@ -21,6 +21,8 @@ const layout: FloorLayout = {
     { cell: [6, 2], standCell: [6, 2], position: { x: 6.5, y: 0.33, z: 2.5 }, facingRad: 0 },
   ],
   decor: [],
+  zones: [],
+  walls: false,
 };
 
 function agent(overrides: Partial<AgentSnapshot>): AgentSnapshot {

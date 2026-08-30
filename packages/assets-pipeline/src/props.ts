@@ -16,7 +16,7 @@ import { join } from 'node:path';
 export const PROP_NAMES = [
   // --- floor & zoning -------------------------------------------------
   'floorFull',
-  'wallHalf', // low partitions: they separate rooms without hiding them from an isometric camera
+  'paneling', // 0.59 tall against 0.85 characters: divides rooms, never hides them
   'rugRectangle',
   'rugRounded',
   'rugSquare',
@@ -31,6 +31,7 @@ export const PROP_NAMES = [
   'laptop',
   'bookcaseOpen',
   'bookcaseClosed',
+  'bookcaseOpenLow',
   'books',
   // --- kitchen --------------------------------------------------------
   'kitchenCabinet',
@@ -50,6 +51,11 @@ export const PROP_NAMES = [
   // --- lounge & tv ----------------------------------------------------
   'loungeSofa',
   'loungeSofaCorner',
+  'loungeDesignSofa',
+  'loungeDesignSofaCorner',
+  'loungeDesignChair',
+  'tableCoffeeSquare',
+  'pillowLong',
   'loungeSofaLong',
   'loungeSofaOttoman',
   'loungeChairRelax',
@@ -64,6 +70,8 @@ export const PROP_NAMES = [
   // --- meeting nook ---------------------------------------------------
   'tableRound',
   'chairRounded',
+  'chairModernCushion',
+  'benchCushion',
   'coatRackStanding',
   // --- greenery & odds ------------------------------------------------
   'pottedPlant',
@@ -73,6 +81,7 @@ export const PROP_NAMES = [
   'trashcan',
   'lampSquareFloor',
   'sideTable',
+  'sideTableDrawers',
   'cardboardBoxOpen',
   'bear',
 ] as const;

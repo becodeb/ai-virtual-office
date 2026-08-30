@@ -13,6 +13,9 @@ import { propGlbUrl } from '../assets/manifest.js';
 import type { Cell, FloorLayout } from '../net/floorLayout.js';
 import { footprintOffset, shiftGeometry } from './propCentering.js';
 
+/** Circulation between rooms: deliberately plainer than any room's own floor. */
+const CORRIDOR_TINT = '#8a6a4f';
+
 export interface FloorProps {
   layout: FloorLayout;
 }
@@ -103,12 +106,38 @@ export function Floor({ layout }: FloorProps): JSX.Element {
     return cells;
   }, [layout.width, layout.height]);
 
-  const [plankA, plankB] = useMemo(() => {
-    const a: Cell[] = [];
-    const b: Cell[] = [];
-    for (const cell of tileCells) (cell[1] % 2 === 0 ? a : b).push(cell);
-    return [a, b] as const;
-  }, [tileCells]);
+  /**
+   * Group the floor by zone, keeping the two-tone plank banding inside each
+   * one. The tint is what turns a flat plane into rooms; the banding is what
+   * stops each room reading as one dead slab of colour.
+   */
+  const groups = useMemo(() => {
+    const zones = layout.zones ?? [];
+    const inZone = (cell: Cell, rect: readonly [number, number, number, number]) =>
+      cell[0] >= rect[0] && cell[0] <= rect[2] && cell[1] >= rect[1] && cell[1] <= rect[3];
+
+    const out: Array<{ key: string; tint: string; cells: Cell[] }> = [];
+    const shade = (hex: string, amount: number) => {
+      const c = new Color(hex);
+      c.multiplyScalar(amount);
+      return `#${c.getHexString()}`;
+    };
+
+    const assigned = new Set<string>();
+    for (const zone of zones) {
+      const cells = tileCells.filter((c) => inZone(c, zone.rect));
+      for (const c of cells) assigned.add(`${c[0]},${c[1]}`);
+      out.push({ key: `${zone.id}-a`, tint: zone.tint, cells: cells.filter((c) => c[1] % 2 === 0) });
+      out.push({ key: `${zone.id}-b`, tint: shade(zone.tint, 0.92), cells: cells.filter((c) => c[1] % 2 !== 0) });
+    }
+
+    // Whatever is not in a zone is circulation: the corridors between rooms.
+    const rest = tileCells.filter((c) => !assigned.has(`${c[0]},${c[1]}`));
+    out.push({ key: 'corridor-a', tint: CORRIDOR_TINT, cells: rest.filter((c) => c[1] % 2 === 0) });
+    out.push({ key: 'corridor-b', tint: shade(CORRIDOR_TINT, 0.92), cells: rest.filter((c) => c[1] % 2 !== 0) });
+
+    return out.filter((g) => g.cells.length > 0);
+  }, [tileCells, layout.zones]);
 
   return (
     <group>
@@ -118,8 +147,9 @@ export function Floor({ layout }: FloorProps): JSX.Element {
         even when it is furnished: there is nothing for the eye to measure the
         furniture against.
       */}
-      <InstancedProp name="floorFull" cells={plankA} receiveShadow tint="#a87f5c" />
-      <InstancedProp name="floorFull" cells={plankB} receiveShadow tint="#9c7452" />
+      {groups.map((g) => (
+        <InstancedProp key={g.key} name="floorFull" cells={g.cells} receiveShadow tint={g.tint} />
+      ))}
     </group>
   );
 }

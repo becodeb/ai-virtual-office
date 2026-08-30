@@ -75,9 +75,15 @@ describe('floor layout', () => {
     expect(furnished, `only ${(furnished * 100).toFixed(0)}% of the floor has anything on it`).toBeGreaterThan(0.3);
   });
 
-  it('keeps every fixture inside the perimeter walls', () => {
+  it('keeps every fixture on the floor', () => {
+    // With `walls: false` the outer ring is ordinary floor, so a fixture is
+    // allowed to sit on it — that ring is exactly where furniture belongs.
+    const margin = layout.walls ? 1 : 0;
     const inside = (c: readonly [number, number]) =>
-      c[0] >= 1 && c[0] <= layout.width - 2 && c[1] >= 1 && c[1] <= layout.height - 2;
+      c[0] >= margin &&
+      c[0] <= layout.width - 1 - margin &&
+      c[1] >= margin &&
+      c[1] <= layout.height - 1 - margin;
     const fixtures: Array<[string, readonly [number, number]]> = [
       ['elevator', layout.elevatorCell],
       ['fire exit', layout.fireExitCell],
@@ -96,7 +102,7 @@ describe('floor layout', () => {
       ...layout.loungeSeats.map((s, i): [string, readonly [number, number]] => [`lounge ${i}`, s.cell]),
     ];
     for (const [name, cell] of fixtures) {
-      expect(inside(cell), `${name} at ${JSON.stringify(cell)} is in a wall`).toBe(true);
+      expect(inside(cell), `${name} at ${JSON.stringify(cell)} is off the floor`).toBe(true);
     }
   });
 

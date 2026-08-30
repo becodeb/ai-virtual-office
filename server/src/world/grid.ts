@@ -70,6 +70,8 @@ export interface DeskLayout {
 export interface FloorLayout {
   width: number;
   height: number;
+  /** Whether a perimeter wall encloses the floor. When false the outer ring is ordinary, usable floor. */
+  walls: boolean;
   elevatorCell: Cell;
   fireExitCell: Cell;
   kitchenCoffeeMachineCell: Cell;
@@ -90,6 +92,7 @@ export interface FloorLayout {
    * in it, and it blocks its cell so characters walk around it rather than
    * through it.
    */
+  zones: Array<{ id: string; rect: readonly [number, number, number, number]; tint: string }>;
   decor: Array<{
     cell: Cell;
     prop: string;
@@ -126,6 +129,8 @@ interface RawFloor {
   architect: { cell: [number, number] };
   /** Whether the floor is enclosed by perimeter walls. Off: in an isometric view the two near walls hide exactly the desks you want to watch. */
   walls?: boolean;
+  /** Named areas, each with its own floor colour. */
+  zones?: RawZone[];
   desks: RawDesk[];
   lounge: { seats: RawSeat[] };
   decor?: RawDecor[];
@@ -142,6 +147,21 @@ interface RawFloor {
  * `flat` marks something you walk over — rugs are 0.01 tall and exist to give
  * a zone an edge, not to be an obstacle.
  */
+/**
+ * A named area of the floor.
+ *
+ * Its `tint` is what makes a room read as a room from above. Low dividers give
+ * a space edges, but it is the change in floor colour underfoot that says "this
+ * is the kitchen and that is the lounge" at a glance — the strongest signal
+ * available to a camera that looks straight down at a diorama.
+ */
+interface RawZone {
+  id: string;
+  /** Inclusive cell bounds: `[x0, y0, x1, y1]`. */
+  rect: [number, number, number, number];
+  tint: string;
+}
+
 interface RawDecor {
   cell: [number, number];
   prop: string;
@@ -206,6 +226,7 @@ export function parseFloorLayout(raw: RawFloor): FloorLayout {
   return {
     width: raw.width,
     height: raw.height,
+    walls: raw.walls ?? true,
     elevatorCell: raw.elevatorCell,
     fireExitCell: raw.fireExitCell,
     kitchenCoffeeMachineCell: raw.kitchen.coffeeMachineCell,
@@ -222,6 +243,7 @@ export function parseFloorLayout(raw: RawFloor): FloorLayout {
       window: d.window ?? false,
     })),
     loungeSeats: raw.lounge.seats.map((s) => seatSocketFromCell(s.cell, s.facing)),
+    zones: (raw.zones ?? []).map((z) => ({ id: z.id, rect: z.rect, tint: z.tint })),
     decor: (raw.decor ?? []).map((d) => ({
       cell: d.cell,
       prop: d.prop,
@@ -264,13 +286,20 @@ export class Grid {
     const grid = new Grid(layout.width, layout.height, cells, layout);
 
     // Perimeter walls, with openings at the elevator and fire exit.
-    for (let x = 0; x < grid.width; x++) {
-      grid.blockUnlessOpening(x, 0, layout);
-      grid.blockUnlessOpening(x, grid.height - 1, layout);
-    }
-    for (let y = 0; y < grid.height; y++) {
-      grid.blockUnlessOpening(0, y, layout);
-      grid.blockUnlessOpening(grid.width - 1, y, layout);
+    //
+    // Only when the floor actually HAS walls. This used to run unconditionally,
+    // which left an invisible barrier around a floor that no longer draws any:
+    // the whole outer ring was unwalkable, so nothing could be placed there and
+    // every plan carried a dead margin of bare floor it could not use.
+    if (layout.walls) {
+      for (let x = 0; x < grid.width; x++) {
+        grid.blockUnlessOpening(x, 0, layout);
+        grid.blockUnlessOpening(x, grid.height - 1, layout);
+      }
+      for (let y = 0; y < grid.height; y++) {
+        grid.blockUnlessOpening(0, y, layout);
+        grid.blockUnlessOpening(grid.width - 1, y, layout);
+      }
     }
 
     for (const desk of layout.desks) {

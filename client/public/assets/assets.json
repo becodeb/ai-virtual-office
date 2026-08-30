@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-30T15:18:45.156Z",
+  "generatedAt": "2026-08-30T15:39:56.284Z",
   "clips": [
     {
       "name": "Crouch_Fwd_Loop",
@@ -751,7 +751,7 @@
   },
   "props": [
     "floorFull",
-    "wallHalf",
+    "paneling",
     "rugRectangle",
     "rugRounded",
     "rugSquare",
@@ -765,6 +765,7 @@
     "laptop",
     "bookcaseOpen",
     "bookcaseClosed",
+    "bookcaseOpenLow",
     "books",
     "kitchenCabinet",
     "kitchenCabinetDrawer",
@@ -782,6 +783,11 @@
     "stoolBar",
     "loungeSofa",
     "loungeSofaCorner",
+    "loungeDesignSofa",
+    "loungeDesignSofaCorner",
+    "loungeDesignChair",
+    "tableCoffeeSquare",
+    "pillowLong",
     "loungeSofaLong",
     "loungeSofaOttoman",
     "loungeChairRelax",
@@ -795,6 +801,8 @@
     "radio",
     "tableRound",
     "chairRounded",
+    "chairModernCushion",
+    "benchCushion",
     "coatRackStanding",
     "pottedPlant",
     "plantSmall1",
@@ -803,6 +811,7 @@
     "trashcan",
     "lampSquareFloor",
     "sideTable",
+    "sideTableDrawers",
     "cardboardBoxOpen",
     "bear"
   ]

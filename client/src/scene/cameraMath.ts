@@ -53,7 +53,11 @@ export function fitZoomForFloor(
   // phone in portrait, where the limit is width and there is height to spare.
   // Fit the diamond's real extents instead.
   const projectedWidth = (floorWidth + floorHeight) * Math.SQRT1_2;
-  const projectedHeight = projectedWidth * Math.sin(ISO_PITCH_RAD);
+  // The floor is not the tallest thing in frame. Bookcases, fridges and the
+  // characters themselves stand above it, and fitting the bare floor plane
+  // crops whatever is at the far edge — which is exactly where the furniture
+  // is, because furniture belongs against the walls.
+  const projectedHeight = projectedWidth * Math.sin(ISO_PITCH_RAD) + SCENE_HEADROOM * Math.cos(ISO_PITCH_RAD);
 
   return Math.min(
     (viewportWidth * margin) / projectedWidth,
@@ -66,6 +70,9 @@ export function fitZoomForFloor(
  * `atan(y / horizontal reach)` for offset (0.6r, 0.75r, 0.6r).
  */
 export const ISO_PITCH_RAD = Math.atan(0.75 / (0.6 * Math.SQRT2));
+
+/** Height of the tallest thing standing on the floor: a fridge is 0.92, a bookcase 0.88. */
+export const SCENE_HEADROOM = 1.1;
 
 /**
  * Camera offset from the floor centre, scaled so it always clears the diorama.

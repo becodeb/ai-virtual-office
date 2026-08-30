@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ISO_PITCH_RAD, distance, fitZoomForFloor, isoOffsetForFloor, stepTowardFocusTarget } from './cameraMath.js';
+import { ISO_PITCH_RAD, SCENE_HEADROOM, distance, fitZoomForFloor, isoOffsetForFloor, stepTowardFocusTarget } from './cameraMath.js';
 
 const isoOffset = { x: 8, y: 10, z: 8 };
 
@@ -60,7 +60,7 @@ describe('fitZoomForFloor', () => {
   /** The projected extents of an isometric floor: a wide, short diamond. */
   function projected(w: number, h: number) {
     const width = (w + h) * Math.SQRT1_2;
-    return { width, height: width * Math.sin(ISO_PITCH_RAD) };
+    return { width, height: width * Math.sin(ISO_PITCH_RAD) + SCENE_HEADROOM * Math.cos(ISO_PITCH_RAD) };
   }
 
   it.each([
@@ -99,5 +99,19 @@ describe('isoOffsetForFloor', () => {
     const large = isoOffsetForFloor(40, 30);
     expect(large.y).toBeGreaterThan(small.y);
     expect(small.y).toBeGreaterThan(12 * 0.5);
+  });
+});
+
+describe('framing leaves room for what stands on the floor', () => {
+  /**
+   * Regression: fitting the bare floor plane cropped the furniture at the far
+   * edge — and furniture is exactly what sits there, because it lines the
+   * walls. A fridge is 0.92 tall and a bookcase 0.88.
+   */
+  it('fits a tall prop standing at the far edge of the floor', () => {
+    const zoom = fitZoomForFloor(11, 7, 1300, 950);
+    const width = (11 + 7) * Math.SQRT1_2;
+    const needed = width * Math.sin(ISO_PITCH_RAD) + SCENE_HEADROOM * Math.cos(ISO_PITCH_RAD);
+    expect(needed * zoom).toBeLessThanOrEqual(950);
   });
 });
