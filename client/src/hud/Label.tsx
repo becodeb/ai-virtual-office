@@ -1,6 +1,6 @@
 /**
- * Overlay label (task 4.12): drei `<Html occlude distanceFactor center>`
- * anchored at head height. Shows machine id, state, and the truncated task
+ * Overlay label (task 4.12): drei `<Html occlude center>` anchored at head
+ * height. Shows machine id, state, and the truncated task
  * summary — or, under redaction (`OFFICE_REDACT_PROMPTS`), metadata only,
  * never a blank gap (office-renderer spec's two label requirements).
  *
@@ -13,6 +13,20 @@
 import { Html } from '@react-three/drei';
 import type { AgentSnapshot } from '@virtual-office/shared';
 import { resolveOverlayLabel } from '../lib/label.js';
+
+/**
+ * `distanceFactor` is deliberately NOT used.
+ *
+ * drei computes `scale = objectScale(camera) * distanceFactor`, and for an
+ * orthographic camera `objectScale` returns `camera.zoom` outright. A
+ * `distanceFactor` of 8 at zoom 37 therefore renders every label at **296x** —
+ * a 10px chip becomes three thousand pixels of dark panel, which covers the
+ * entire viewport and reads as "the whole app went black".
+ *
+ * Omitting it pins labels to a constant on-screen size, which is what a diorama
+ * HUD wants anyway: they stay legible when the office is zoomed out, and they
+ * never grow to eat the screen when it is zoomed in. See `labelScreenScale`.
+ */
 
 export interface AgentLabelProps {
   agent: AgentSnapshot;
@@ -32,19 +46,19 @@ export function AgentLabel({ agent, displayRole, redactPrompts, focused, yOffset
   });
 
   return (
-    <Html occlude distanceFactor={8} center position={[0, yOffset, 0]}>
+    <Html occlude center position={[0, yOffset, 0]}>
       <div
-        className={`pointer-events-none select-none whitespace-nowrap rounded bg-black/70 px-2 py-1 text-[10px] leading-tight text-white shadow ${
+        className={`pointer-events-none max-w-[9rem] select-none truncate rounded bg-black/65 px-1.5 py-0.5 text-[9px] leading-snug text-white shadow ${
           focused ? 'ring-1 ring-amber-400' : ''
         }`}
       >
-        <div className="font-semibold">
+        <div className="truncate font-semibold">
           {content.machineId} <span className="text-white/60">· {displayRole}</span>
         </div>
         {content.taskText !== null ? (
-          <div className="text-white/80">{content.taskText}</div>
+          <div className="truncate text-white/75">{content.taskText}</div>
         ) : (
-          <div className="italic text-white/50">{content.metadata}</div>
+          <div className="truncate italic text-white/50">{content.metadata}</div>
         )}
       </div>
     </Html>

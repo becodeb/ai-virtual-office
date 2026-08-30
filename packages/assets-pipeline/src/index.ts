@@ -29,7 +29,7 @@ import {
 import { assertSingleRig, boneSignature, listFbxFiles } from './discover.js';
 import { extractBoneNames, findSkinnedMesh, loadFbx, loadGltf, measureExportedStandingHeight } from './load.js';
 import { buildRetargeter, type RetargetRig, retargetClipWorldDelta, HIP_BONE, IK_BONES } from './retarget.js';
-import { assertNoFlatPelvisAcrossAllClips, verifyClips } from './verify.js';
+import { assertClipTranslationsFitCharacter, assertNoFlatPelvisAcrossAllClips, verifyClips } from './verify.js';
 import {
   applyUniformScale,
   assertSlotColorConsistency,
@@ -141,7 +141,19 @@ async function main() {
   // the armature + clips, never mesh geometry.
   const tExportAnim = Date.now();
   referenceSkinned.parent?.remove(referenceSkinned);
-  const animationsScene = buildAnimationsScene(referenceGroup);
+  const { scene: animationsScene, removedScale } = buildAnimationsScene(referenceGroup);
+  // The armature's import scale has just been cleared, so the clips' hip and
+  // IK-foot translations must come down by the same factor or every animation
+  // lifts the character off the floor by that multiple.
+  if (removedScale !== 1) {
+    for (const clip of allClips) scaleClipPositionTracks(clip, 1 / removedScale, [HIP_BONE, ...IK_BONES]);
+    console.log(`[assets-pipeline] rescaled clip translations by 1/${removedScale} (the cleared import scale)`);
+  }
+  // A clip whose root translation sits outside the character's own body is the
+  // signature of a units mismatch, and it renders as characters floating in the
+  // sky rather than as anything that looks like an animation bug.
+  assertClipTranslationsFitCharacter(allClips, TARGET_STANDING_HEIGHT, HIP_BONE);
+
   const animGlb = await exportGLB(animationsScene, allClips);
   mkdirSync(OUTPUT_ROOT, { recursive: true });
   writeFileSync(OUTPUT_ANIMATIONS_GLB, Buffer.from(animGlb));

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { distance, fitZoomForFloor, isoOffsetForFloor, stepTowardFocusTarget } from './cameraMath.js';
+import { ISO_PITCH_RAD, distance, fitZoomForFloor, isoOffsetForFloor, stepTowardFocusTarget } from './cameraMath.js';
 
 const isoOffset = { x: 8, y: 10, z: 8 };
 
@@ -57,16 +57,31 @@ describe('fitZoomForFloor', () => {
    * a phone in portrait. A 24-unit floor ran straight off the screen and the
    * office looked like it had been cut in half.
    */
-  it('frames the whole floor on a portrait phone', () => {
-    const zoom = fitZoomForFloor(16, 12, 923, 1600);
-    const visibleUnits = Math.min(923, 1600) / zoom;
-    expect(visibleUnits).toBeGreaterThanOrEqual(Math.hypot(16, 12));
+  /** The projected extents of an isometric floor: a wide, short diamond. */
+  function projected(w: number, h: number) {
+    const width = (w + h) * Math.SQRT1_2;
+    return { width, height: width * Math.sin(ISO_PITCH_RAD) };
+  }
+
+  it.each([
+    ['portrait phone', 900, 1600],
+    ['wide desktop', 2560, 1440],
+    ['square', 1000, 1000],
+  ])('fits the whole floor on a %s without cropping it', (_label, vw, vh) => {
+    const zoom = fitZoomForFloor(16, 12, vw, vh);
+    const p = projected(16, 12);
+    expect(p.width * zoom).toBeLessThanOrEqual(vw);
+    expect(p.height * zoom).toBeLessThanOrEqual(vh);
   });
 
-  it('frames the whole floor on a wide desktop', () => {
-    const zoom = fitZoomForFloor(16, 12, 2560, 1440);
-    const visibleUnits = Math.min(2560, 1440) / zoom;
-    expect(visibleUnits).toBeGreaterThanOrEqual(Math.hypot(16, 12));
+  /**
+   * Regression: fitting the floor's bounding CIRCLE treats a wide, short
+   * diamond as if it were as tall as it is wide, and throws away a third of
+   * the screen on a phone.
+   */
+  it('uses more of a portrait screen than a bounding-circle fit would', () => {
+    const circleFit = Math.min(900, 1600) / (Math.hypot(16, 12) * 1.25);
+    expect(fitZoomForFloor(16, 12, 900, 1600)).toBeGreaterThan(circleFit);
   });
 
   it('zooms out for a bigger floor rather than cropping it', () => {

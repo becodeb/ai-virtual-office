@@ -44,13 +44,28 @@ export function fitZoomForFloor(
   floorHeight: number,
   viewportWidth: number,
   viewportHeight: number,
-  margin = 1.25
+  margin = 0.92
 ): number {
-  const radius = Math.hypot(floorWidth, floorHeight) / 2;
-  const needed = radius * 2 * margin;
-  if (needed <= 0) return 1;
-  return Math.min(viewportWidth, viewportHeight) / needed;
+  if (floorWidth <= 0 || floorHeight <= 0) return 1;
+
+  // An isometric floor does not project as a circle, it projects as a wide,
+  // short diamond. Fitting its bounding circle wastes most of the screen on a
+  // phone in portrait, where the limit is width and there is height to spare.
+  // Fit the diamond's real extents instead.
+  const projectedWidth = (floorWidth + floorHeight) * Math.SQRT1_2;
+  const projectedHeight = projectedWidth * Math.sin(ISO_PITCH_RAD);
+
+  return Math.min(
+    (viewportWidth * margin) / projectedWidth,
+    (viewportHeight * margin) / projectedHeight
+  );
 }
+
+/**
+ * The camera's downward pitch, from the isometric offset below:
+ * `atan(y / horizontal reach)` for offset (0.6r, 0.75r, 0.6r).
+ */
+export const ISO_PITCH_RAD = Math.atan(0.75 / (0.6 * Math.SQRT2));
 
 /**
  * Camera offset from the floor centre, scaled so it always clears the diorama.

@@ -47,6 +47,8 @@ export interface FloorLayout {
   architectCell: Cell;
   desks: DeskLayout[];
   loungeSeats: SeatSocket[];
+  /** Cosmetic furniture; blocks its cell server-side but is purely visual here. */
+  decor: Array<{ cell: Cell; prop: string }>;
 }
 
 function isCell(value: unknown): value is Cell {
@@ -89,7 +91,8 @@ export function isFloorLayout(value: unknown): value is FloorLayout {
     Array.isArray(v.desks) &&
     v.desks.every(isDeskLayout) &&
     Array.isArray(v.loungeSeats) &&
-    v.loungeSeats.every(isSeatSocket)
+    v.loungeSeats.every(isSeatSocket) &&
+    (v.decor === undefined || Array.isArray(v.decor))
   );
 }
 

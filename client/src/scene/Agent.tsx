@@ -34,6 +34,25 @@ const DANCE_PARTY_MS = 10_000;
 const DESPAWN_DISSOLVE_MS = 3_000; // decision 7.
 const HEAD_HEIGHT = 1.05; // world-scale.md standing height; the label anchors at the top of the character.
 
+/**
+ * Vertical spread applied to label anchors so neighbours do not stack.
+ *
+ * Characters at adjacent desks project to nearly the same screen height, so
+ * their label chips land on top of each other and the office reads as a pile of
+ * overlapping black boxes. Staggering the anchor by desk index separates them
+ * deterministically — the same character always sits on the same rung, so the
+ * labels do not shuffle between frames.
+ */
+const LABEL_STAGGER_STEPS = 3;
+const LABEL_STAGGER_HEIGHT = 0.22;
+
+function labelStagger(agent: AgentSnapshot, layout: FloorLayout): number {
+  const index =
+    agent.deskId !== null ? layout.desks.findIndex((d) => d.id === agent.deskId) : -1;
+  const rung = index >= 0 ? index % LABEL_STAGGER_STEPS : agent.agentId.length % LABEL_STAGGER_STEPS;
+  return rung * LABEL_STAGGER_HEIGHT;
+}
+
 function lerpAngle(a: number, b: number, t: number): number {
   let diff = ((b - a + Math.PI) % (Math.PI * 2)) - Math.PI;
   if (diff < -Math.PI) diff += Math.PI * 2;
@@ -162,7 +181,13 @@ export function Agent({ agent, layout, desks, clips, manifestSkin, redactPrompts
   return (
     <group ref={groupRef} onClick={(e) => { e.stopPropagation(); onSelect(agent.agentId); }}>
       <primitive object={cloned} />
-      <AgentLabel agent={agent} displayRole={displayRole} redactPrompts={redactPrompts} focused={focused} yOffset={HEAD_HEIGHT} />
+      <AgentLabel
+        agent={agent}
+        displayRole={displayRole}
+        redactPrompts={redactPrompts}
+        focused={focused}
+        yOffset={HEAD_HEIGHT + labelStagger(agent, layout)}
+      />
     </group>
   );
 }

@@ -14,6 +14,7 @@ const validLayout: FloorLayout = {
   architectCell: [3, 3],
   desks: [{ id: 'D1', cell: [1, 1], window: false, seat: { cell: [1, 2], standCell: [1, 2], position: { x: 1.5, y: 0.33, z: 2.5 }, facingRad: 0 } }],
   loungeSeats: [],
+  decor: [],
 };
 
 describe('isFloorLayout', () => {

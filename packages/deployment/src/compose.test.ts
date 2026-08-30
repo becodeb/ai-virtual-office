@@ -181,3 +181,41 @@ describe('the hook and the hub agree on a port', () => {
     expect(settings).toContain(`127.0.0.1:${hookDefault}`);
   });
 });
+
+describe('the scene only asks for props that shipped', () => {
+  /**
+   * Regression: `floor.json` referenced `plantSmall2`, which the pipeline never
+   * copied. `useGLTF` throws on a 404, React unmounts the whole canvas, and the
+   * entire office renders as a black screen — for one missing decorative plant.
+   */
+  it('every prop the floor layout references exists in the committed props', () => {
+    const layout = JSON.parse(read('server/src/world/floor.json')) as {
+      decor?: Array<{ prop: string }>;
+    };
+    const propsDir = join(REPO_ROOT, 'client/public/assets/props');
+    const shipped = new Set(
+      readdirSync(propsDir)
+        .filter((f) => f.endsWith('.glb'))
+        .map((f) => f.slice(0, -'.glb'.length))
+    );
+
+    // Props the renderer hardcodes, plus everything the layout names.
+    const required = [
+      'floorFull',
+      'wall',
+      'desk',
+      'chairDesk',
+      'computerScreen',
+      'computerKeyboard',
+      'loungeSofa',
+      'kitchenCoffeeMachine',
+      'televisionModern',
+      'bear',
+      ...(layout.decor ?? []).map((d) => d.prop),
+    ];
+
+    for (const prop of required) {
+      expect(shipped.has(prop), `prop "${prop}" is referenced but was never copied to client/public/assets/props`).toBe(true);
+    }
+  });
+});

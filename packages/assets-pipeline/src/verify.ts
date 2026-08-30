@@ -125,3 +125,34 @@ export function assertNoFlatPelvisAcrossAllClips(clipsByName: ReadonlyMap<string
     );
   }
 }
+
+/**
+ * Asserts every clip's root translation stays inside the character's own body.
+ *
+ * A hip that travels to Y=45 on a character 1.05 units tall is not a subtly
+ * wrong animation — it is a units mismatch, and on screen it looks like the
+ * characters have detached from the office and are hovering in the sky. Both
+ * the mesh scale and the clip translations have to come down together; fixing
+ * only one of them produces exactly this.
+ */
+export function assertClipTranslationsFitCharacter(
+  clips: readonly THREE.AnimationClip[],
+  standingHeight: number,
+  hipBone: string
+): void {
+  const ceiling = standingHeight * 1.5;
+  for (const clip of clips) {
+    const track = clip.tracks.find((t) => t.name === `${hipBone}.position`);
+    if (track === undefined) continue;
+    for (let i = 0; i < track.values.length / 3; i++) {
+      const y = track.values[i * 3 + 1] as number;
+      if (y < -ceiling || y > ceiling) {
+        throw new Error(
+          `Clip "${clip.name}" moves ${hipBone} to Y=${y.toFixed(2)} on a character ${standingHeight} units tall. ` +
+            `That is a unit mismatch between the mesh scale and the clip translations, and it renders as ` +
+            `characters floating above the office.`
+        );
+      }
+    }
+  }
+}

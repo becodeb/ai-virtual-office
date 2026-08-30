@@ -67,6 +67,13 @@ export interface FloorLayout {
   architectCell: Cell;
   desks: DeskLayout[];
   loungeSeats: SeatSocket[];
+  /**
+   * Cosmetic furniture — plants, bookcases, a coffee table, a bin. It exists
+   * so the room reads as an office rather than a warehouse with twelve tables
+   * in it, and it blocks its cell so characters walk around it rather than
+   * through it.
+   */
+  decor: Array<{ cell: Cell; prop: string }>;
 }
 
 type RawFacing = 'north' | 'south' | 'east' | 'west';
@@ -95,6 +102,13 @@ interface RawFloor {
   architect: { cell: [number, number] };
   desks: RawDesk[];
   lounge: { seats: RawSeat[] };
+  decor?: RawDecor[];
+}
+
+/** A purely cosmetic prop. It blocks its cell like any other furniture, but nothing routes to it. */
+interface RawDecor {
+  cell: [number, number];
+  prop: string;
 }
 
 /**
@@ -167,6 +181,7 @@ export function parseFloorLayout(raw: RawFloor): FloorLayout {
       window: d.window ?? false,
     })),
     loungeSeats: raw.lounge.seats.map((s) => seatSocketFromCell(s.cell, s.facing)),
+    decor: (raw.decor ?? []).map((d) => ({ cell: d.cell, prop: d.prop })),
   };
 }
 
@@ -221,6 +236,9 @@ export class Grid {
     grid.set(layout.meetingRoomScreenCell[0], layout.meetingRoomScreenCell[1], CELL_BLOCKED);
     grid.set(layout.bearCell[0], layout.bearCell[1], CELL_BLOCKED);
     grid.set(layout.architectCell[0], layout.architectCell[1], CELL_BLOCKED);
+    for (const item of layout.decor) {
+      grid.set(item.cell[0], item.cell[1], CELL_BLOCKED);
+    }
     return grid;
   }
 

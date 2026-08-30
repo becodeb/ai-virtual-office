@@ -78,12 +78,16 @@ export function exportGLB(scene: THREE.Object3D, animations: THREE.AnimationClip
  *
  * Bones are skipped: their local scale is part of the rig, not the import.
  */
-function clearImporterScale(root: THREE.Object3D): void {
+function clearImporterScale(root: THREE.Object3D): number {
+  let removed = 1;
   root.traverse((node) => {
     if ((node as THREE.Bone).isBone) return;
+    // Every non-bone node carries the same uniform import scale; record it once.
+    if (node.scale.x !== 1) removed = node.scale.x;
     node.scale.set(1, 1, 1);
   });
   root.updateMatrixWorld(true);
+  return removed;
 }
 
 /** Builds a mesh-only scene (no clips) for one character skin's GLB. */
@@ -95,10 +99,22 @@ export function buildCharacterScene(mesh: THREE.SkinnedMesh, skeletonRoot: THREE
   return group;
 }
 
-/** Builds a clips-only scene (a bare armature, no mesh) for the shared animations GLB. */
-export function buildAnimationsScene(skeletonRoot: THREE.Object3D): THREE.Group {
+/**
+ * Builds a clips-only scene (a bare armature, no mesh) for the shared
+ * animations GLB, and reports the import scale it removed.
+ *
+ * The caller MUST apply that factor to the clips' position tracks. Clearing the
+ * node scale on the armature without rescaling the tracks leaves the hip and
+ * IK-foot translations a hundred times too large: the meshes are the right
+ * size, but every animation lifts the root bone tens of units into the air, so
+ * characters render floating in the sky above the office with their legs
+ * trailing below the camera.
+ */
+export function buildAnimationsScene(skeletonRoot: THREE.Object3D): {
+  scene: THREE.Group;
+  removedScale: number;
+} {
   const group = new THREE.Group();
   group.add(skeletonRoot);
-  clearImporterScale(group);
-  return group;
+  return { scene: group, removedScale: clearImporterScale(group) };
 }

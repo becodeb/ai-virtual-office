@@ -17,7 +17,10 @@ const layout: FloorLayout = {
   desks: [
     { id: 'D1', cell: [3, 3], window: false, seat: { cell: [3, 4], standCell: [3, 4], position: { x: 3.5, y: 0.33, z: 4.5 }, facingRad: 0 } },
   ],
-  loungeSeats: [{ cell: [6, 2], standCell: [6, 2], position: { x: 6.5, y: 0.33, z: 2.5 }, facingRad: 0 }],
+  loungeSeats: [
+    { cell: [6, 2], standCell: [6, 2], position: { x: 6.5, y: 0.33, z: 2.5 }, facingRad: 0 },
+  ],
+  decor: [],
 };
 
 function agent(overrides: Partial<AgentSnapshot>): AgentSnapshot {
