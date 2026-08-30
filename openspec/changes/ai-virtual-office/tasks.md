@@ -31,11 +31,11 @@ Estimate is driven by five greenfield workspaces (`hooks/`, `server/`, `client/`
 
 ## Phase 1: Foundation + Asset Pipeline
 
-- [ ] 1.1 Create `pnpm-workspace.yaml`, root `package.json`, `tsconfig.base.json`, `vitest.workspace.ts`.
-- [ ] 1.2 Create `packages/shared/src/wire.ts` (hook→hub payload types) per design §1 payload shape.
-- [ ] 1.3 Create `packages/shared/src/protocol.ts` (WS frame types: `hello`, `snapshot`, `delta`, `event`, `pong`, client `hello`/`focus`/`egg`/`ping`) per design §3.
-- [ ] 1.4 Create `packages/shared/src/state.ts` defining `AgentState` enum matching design §2 transition table (`SPAWNING`, `WALKING`, `QUEUED`, `SEATED_TYPING`, `SEATED_IDLE`, `LOUNGING`, `DELEGATING`, `REPORTING`, `SLEEPING`, `ZOMBIE`, `DESPAWNING`) — 11 states satisfying world-state-hub spec's "at least" list.
-- [ ] 1.5 Create `packages/shared/src/skins.ts` with the 27-skin manifest from `openspec/research/skin-manifest.md` (role→skin file mapping, badges, easter-egg skins, `BaseCharacter` fallback).
+- [x] 1.1 Create `pnpm-workspace.yaml`, root `package.json`, `tsconfig.base.json`, `vitest.workspace.ts`.
+- [x] 1.2 Create `packages/shared/src/wire.ts` (hook→hub payload types) per design §1 payload shape.
+- [x] 1.3 Create `packages/shared/src/protocol.ts` (WS frame types: `hello`, `snapshot`, `delta`, `event`, `pong`, client `hello`/`focus`/`egg`/`ping`) per design §3.
+- [x] 1.4 Create `packages/shared/src/state.ts` defining `AgentState` enum matching design §2 transition table (`SPAWNING`, `WALKING`, `QUEUED`, `SEATED_TYPING`, `SEATED_IDLE`, `LOUNGING`, `DELEGATING`, `REPORTING`, `SLEEPING`, `ZOMBIE`, `DESPAWNING`) — 11 states satisfying world-state-hub spec's "at least" list.
+- [x] 1.5 Create `packages/shared/src/skins.ts` with the 27-skin manifest from `openspec/research/skin-manifest.md` (role→skin file mapping, badges, easter-egg skins, `BaseCharacter` fallback).
 - [ ] 1.6 Scaffold `packages/assets-pipeline/` (`package.json`, `src/index.ts` CLI entry `pnpm assets:build`).
 - [ ] 1.7 Implement `src/discover.ts`: enumerate `assets/models/*.fbx`, compare sorted bone-name signatures, fail loud on >1 distinct rig. RED test: synthetic second rig signature triggers failure (asset-pipeline spec, single-rig invariant).
 - [ ] 1.8 Implement `src/load.ts`: headless FBX/GLB loading via `loader.parse(buf, '')`, no DOM.
