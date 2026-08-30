@@ -1,56 +1,56 @@
 {
-  "width": 13,
-  "height": 10,
+  "width": 11,
+  "height": 8,
   "walls": false,
   "elevatorCell": [
     1,
-    4
+    3
   ],
   "fireExitCell": [
-    11,
-    8
+    9,
+    3
   ],
   "kitchen": {
     "coffeeMachineCell": [
-      11,
+      8,
       1
     ],
     "standCell": [
-      10,
-      1
+      8,
+      2
     ]
   },
   "meetingRoom": {
     "screenCell": [
       1,
-      1
+      6
     ]
   },
   "bear": {
     "cell": [
       1,
-      8
+      1
     ],
     "standCell": [
       2,
-      8
+      1
     ]
   },
   "architect": {
     "cell": [
-      11,
-      4
+      9,
+      5
     ]
   },
   "desks": [
     {
       "id": "D1",
       "cell": [
-        3,
+        2,
         2
       ],
       "seatCell": [
-        4,
+        3,
         2
       ],
       "facing": "west",
@@ -59,11 +59,11 @@
     {
       "id": "D2",
       "cell": [
-        3,
+        2,
         3
       ],
       "seatCell": [
-        4,
+        3,
         3
       ],
       "facing": "west",
@@ -72,11 +72,11 @@
     {
       "id": "D3",
       "cell": [
-        3,
+        2,
         4
       ],
       "seatCell": [
-        4,
+        3,
         4
       ],
       "facing": "west",
@@ -85,116 +85,38 @@
     {
       "id": "D4",
       "cell": [
-        3,
-        5
-      ],
-      "seatCell": [
-        4,
-        5
-      ],
-      "facing": "west",
-      "window": false
-    },
-    {
-      "id": "D5",
-      "cell": [
-        3,
-        6
-      ],
-      "seatCell": [
-        4,
-        6
-      ],
-      "facing": "west",
-      "window": false
-    },
-    {
-      "id": "D6",
-      "cell": [
-        3,
-        7
-      ],
-      "seatCell": [
-        4,
-        7
-      ],
-      "facing": "west",
-      "window": false
-    },
-    {
-      "id": "D7",
-      "cell": [
-        7,
+        6,
         2
       ],
       "seatCell": [
-        6,
+        5,
         2
       ],
       "facing": "east",
       "window": true
     },
     {
-      "id": "D8",
+      "id": "D5",
       "cell": [
-        7,
-        3
-      ],
-      "seatCell": [
         6,
         3
       ],
+      "seatCell": [
+        5,
+        3
+      ],
       "facing": "east",
       "window": false
     },
     {
-      "id": "D9",
+      "id": "D6",
       "cell": [
-        7,
-        4
-      ],
-      "seatCell": [
         6,
         4
       ],
-      "facing": "east",
-      "window": false
-    },
-    {
-      "id": "D10",
-      "cell": [
-        7,
-        5
-      ],
       "seatCell": [
-        6,
-        5
-      ],
-      "facing": "east",
-      "window": false
-    },
-    {
-      "id": "D11",
-      "cell": [
-        7,
-        6
-      ],
-      "seatCell": [
-        6,
-        6
-      ],
-      "facing": "east",
-      "window": false
-    },
-    {
-      "id": "D12",
-      "cell": [
-        7,
-        7
-      ],
-      "seatCell": [
-        6,
-        7
+        5,
+        4
       ],
       "facing": "east",
       "window": false
@@ -204,160 +126,381 @@
     "seats": [
       {
         "cell": [
-          8,
+          6,
           6
         ],
-        "facing": "south"
+        "facing": "east"
       },
       {
         "cell": [
-          9,
+          7,
           6
         ],
-        "facing": "south"
-      },
-      {
-        "cell": [
-          10,
-          6
-        ],
-        "facing": "south"
-      },
-      {
-        "cell": [
-          11,
-          6
-        ],
-        "facing": "south"
+        "facing": "east"
       }
     ]
   },
   "decor": [
     {
       "cell": [
-        1,
+        6,
+        1
+      ],
+      "prop": "kitchenCabinet",
+      "facing": "south",
+      "offset": [
+        -0.25,
+        0
+      ]
+    },
+    {
+      "cell": [
+        6,
+        1
+      ],
+      "prop": "kitchenSink",
+      "facing": "south",
+      "offset": [
+        0.25,
+        0
+      ]
+    },
+    {
+      "cell": [
+        6,
+        1
+      ],
+      "prop": "kitchenCabinetUpper",
+      "facing": "south",
+      "offset": [
+        -0.25,
+        -0.02
+      ],
+      "y": 0.62
+    },
+    {
+      "cell": [
+        6,
+        1
+      ],
+      "prop": "toaster",
+      "facing": "south",
+      "offset": [
+        0.25,
+        0
+      ],
+      "y": 0.46
+    },
+    {
+      "cell": [
+        7,
+        1
+      ],
+      "prop": "kitchenCabinetDrawer",
+      "facing": "south",
+      "offset": [
+        -0.25,
+        0
+      ]
+    },
+    {
+      "cell": [
+        7,
+        1
+      ],
+      "prop": "kitchenStove",
+      "facing": "south",
+      "offset": [
+        0.25,
+        0
+      ]
+    },
+    {
+      "cell": [
+        7,
+        1
+      ],
+      "prop": "hoodModern",
+      "facing": "south",
+      "offset": [
+        0.25,
+        -0.02
+      ],
+      "y": 0.62
+    },
+    {
+      "cell": [
+        9,
+        1
+      ],
+      "prop": "kitchenFridge",
+      "facing": "south",
+      "offset": [
+        0,
+        0
+      ]
+    },
+    {
+      "cell": [
+        9,
         2
       ],
-      "prop": "pottedPlant"
+      "prop": "kitchenBar",
+      "facing": "north",
+      "offset": [
+        0,
+        0
+      ]
     },
     {
       "cell": [
-        1,
-        3
-      ],
-      "prop": "bookcaseOpen"
-    },
-    {
-      "cell": [
-        1,
+        9,
         6
       ],
-      "prop": "bookcaseOpen"
+      "prop": "cabinetTelevision",
+      "facing": "west",
+      "offset": [
+        0,
+        0
+      ]
+    },
+    {
+      "cell": [
+        9,
+        6
+      ],
+      "prop": "televisionModern",
+      "facing": "west",
+      "offset": [
+        0,
+        0
+      ],
+      "y": 0.31
+    },
+    {
+      "cell": [
+        8,
+        6
+      ],
+      "prop": "tableCoffee",
+      "facing": "north",
+      "offset": [
+        0,
+        0
+      ]
+    },
+    {
+      "cell": [
+        5,
+        6
+      ],
+      "prop": "loungeSofaOttoman",
+      "facing": "east",
+      "offset": [
+        0,
+        0
+      ]
+    },
+    {
+      "cell": [
+        9,
+        4
+      ],
+      "prop": "lampRoundFloor",
+      "facing": "west",
+      "offset": [
+        0,
+        0
+      ]
+    },
+    {
+      "cell": [
+        2,
+        6
+      ],
+      "prop": "tableRound",
+      "facing": "north",
+      "offset": [
+        0,
+        0
+      ]
+    },
+    {
+      "cell": [
+        3,
+        6
+      ],
+      "prop": "chairRounded",
+      "facing": "west",
+      "offset": [
+        0,
+        0
+      ]
     },
     {
       "cell": [
         1,
-        7
+        2
       ],
-      "prop": "pottedPlant"
+      "prop": "bookcaseOpen",
+      "facing": "east",
+      "offset": [
+        0,
+        0
+      ]
+    },
+    {
+      "cell": [
+        7,
+        2
+      ],
+      "prop": "trashcan",
+      "facing": "north",
+      "offset": [
+        0,
+        0
+      ]
+    },
+    {
+      "cell": [
+        4,
+        6
+      ],
+      "prop": "cardboardBoxOpen",
+      "facing": "north",
+      "offset": [
+        0,
+        0
+      ]
     },
     {
       "cell": [
         2,
         2
       ],
-      "prop": "lampSquareFloor"
-    },
-    {
-      "cell": [
-        8,
-        3
+      "prop": "radio",
+      "facing": "east",
+      "offset": [
+        0,
+        0
       ],
-      "prop": "trashcan"
+      "y": 0.39
     },
     {
       "cell": [
-        8,
-        5
+        7,
+        4
       ],
-      "prop": "plantSmall1"
+      "prop": "plantSmall1",
+      "facing": "north",
+      "offset": [
+        0,
+        0
+      ]
     },
     {
       "cell": [
-        9,
-        3
-      ],
-      "prop": "stoolBar"
-    },
-    {
-      "cell": [
-        9,
-        5
-      ],
-      "prop": "plantSmall1"
-    },
-    {
-      "cell": [
-        10,
-        3
-      ],
-      "prop": "plantSmall1"
-    },
-    {
-      "cell": [
-        11,
+        4,
         2
       ],
-      "prop": "pottedPlant"
+      "prop": "rugRectangle",
+      "facing": "north",
+      "offset": [
+        0,
+        0
+      ],
+      "flat": true
     },
     {
       "cell": [
-        11,
+        4,
+        4
+      ],
+      "prop": "rugRectangle",
+      "facing": "north",
+      "offset": [
+        0,
+        0
+      ],
+      "flat": true
+    },
+    {
+      "cell": [
+        2,
+        6
+      ],
+      "prop": "rugSquare",
+      "facing": "north",
+      "offset": [
+        0,
+        0
+      ],
+      "flat": true
+    },
+    {
+      "cell": [
+        7,
+        6
+      ],
+      "prop": "rugRounded",
+      "facing": "north",
+      "offset": [
+        0,
+        0
+      ],
+      "flat": true
+    },
+    {
+      "cell": [
+        1,
         3
       ],
-      "prop": "tableCoffee"
+      "prop": "rugDoormat",
+      "facing": "north",
+      "offset": [
+        0,
+        0
+      ],
+      "flat": true
+    },
+    {
+      "cell": [
+        8,
+        5
+      ],
+      "prop": "rugSquare",
+      "facing": "north",
+      "offset": [
+        0,
+        0
+      ],
+      "flat": true
+    },
+    {
+      "cell": [
+        5,
+        5
+      ],
+      "prop": "rugRectangle",
+      "facing": "north",
+      "offset": [
+        0,
+        0
+      ],
+      "flat": true
     },
     {
       "cell": [
         2,
-        1
-      ],
-      "prop": "plantSmall1"
-    },
-    {
-      "cell": [
-        9,
-        1
-      ],
-      "prop": "pottedPlant"
-    },
-    {
-      "cell": [
-        10,
         5
       ],
-      "prop": "cardboardBoxOpen"
-    },
-    {
-      "cell": [
-        11,
-        5
+      "prop": "rugSquare",
+      "facing": "north",
+      "offset": [
+        0,
+        0
       ],
-      "prop": "pottedPlant"
-    },
-    {
-      "cell": [
-        2,
-        4
-      ],
-      "prop": "plantSmall1"
-    },
-    {
-      "cell": [
-        10,
-        4
-      ],
-      "prop": "stoolBar"
+      "flat": true
     }
   ]
 }

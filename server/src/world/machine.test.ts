@@ -121,7 +121,8 @@ function subagentStop(parentSessionId: string, subagentId: string, now: number, 
   return basePayload('SubagentStop', parentSessionId, now, { subagentId, ok }, null);
 }
 
-function fillAllDesks(world: WorldState, now: number, count = 12): string[] {
+/** Fills every desk the floor actually has, so the plan can change freely. */
+function fillAllDesks(world: WorldState, now: number, count = world.desks.desks.length): string[] {
   const ids: string[] = [];
   for (let i = 0; i < count; i++) {
     const id = `filler-${i}`;
@@ -153,7 +154,7 @@ describe('machine — spawn, desks, and basic seated transitions', () => {
     expect(world.agents.get('s1')!.state).toBe('SEATED_IDLE');
   });
 
-  it('13th concurrent session queues in the lounge instead of creating a 13th desk', () => {
+  it('one session past the last desk queues in the lounge instead of growing the floor', () => {
     const world = createWorld();
     fillAllDesks(world, T0);
     hook(world, sessionStart('overflow', T0), T0);

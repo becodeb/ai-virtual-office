@@ -47,11 +47,32 @@ describe('seat sockets', () => {
 });
 
 describe('floor layout', () => {
-  it('is dense enough to read as an office rather than a warehouse', () => {
-    const cells = layout.width * layout.height;
-    const cellsPerDesk = cells / layout.desks.length;
-    // 432 cells for 12 desks read as an empty hangar with furniture in it.
-    expect(cellsPerDesk, `${cells} cells for ${layout.desks.length} desks`).toBeLessThan(20);
+  /**
+   * Density is about purpose, not desk count. An earlier version measured
+   * cells-per-desk, which rewards cramming in workstations and says nothing
+   * about what actually looked wrong: wide stretches of bare floor with no
+   * reason to exist. Measure how much of the room is furnished instead.
+   */
+  it('leaves no large stretch of purposeless floor', () => {
+    const occupied = new Set<string>();
+    const mark = (c: readonly [number, number]) => occupied.add(`${c[0]},${c[1]}`);
+    for (const d of layout.desks) {
+      mark(d.cell);
+      mark(d.seat.cell);
+    }
+    for (const s of layout.loungeSeats) mark(s.cell);
+    for (const d of layout.decor) mark(d.cell);
+    for (const c of [
+      layout.kitchenCoffeeMachineCell,
+      layout.meetingRoomScreenCell,
+      layout.bearCell,
+      layout.architectCell,
+    ]) {
+      mark(c);
+    }
+
+    const furnished = occupied.size / (layout.width * layout.height);
+    expect(furnished, `only ${(furnished * 100).toFixed(0)}% of the floor has anything on it`).toBeGreaterThan(0.3);
   });
 
   it('keeps every fixture inside the perimeter walls', () => {

@@ -93,9 +93,14 @@ export function Props({ layout }: PropsProps): JSX.Element {
       <PropInstance name="bear" position={[layout.bearCell[0] + 0.5, 0, layout.bearCell[1] + 0.5]} />
       {(layout.decor ?? []).map((item) => (
         <PropInstance
-          key={`${item.prop}-${item.cell[0]}-${item.cell[1]}`}
+          key={`${item.prop}-${item.cell[0]}-${item.cell[1]}-${item.offset?.[0] ?? 0}-${item.offset?.[1] ?? 0}`}
           name={item.prop}
-          position={[item.cell[0] + 0.5, 0, item.cell[1] + 0.5]}
+          position={[
+            item.cell[0] + 0.5 + (item.offset?.[0] ?? 0),
+            item.y ?? 0,
+            item.cell[1] + 0.5 + (item.offset?.[1] ?? 0),
+          ]}
+          rotationY={item.facingRad ?? 0}
         />
       ))}
     </group>

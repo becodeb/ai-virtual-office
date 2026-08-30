@@ -2,42 +2,79 @@
  * Stage 7 — props.
  *
  * Kenney office props already ship as `.glb` — zero conversion needed.
- * Copies the exact set named in `openspec/research/creative-brief.md`
- * "Props note" from the raw Kenney kit into `client/public/assets/props/`.
+ * Copies a curated set from the raw Kenney kit into
+ * `client/public/assets/props/`. The kit ships 140 props — a whole house, not
+ * just an office — so the set below is chosen to furnish real rooms: a working
+ * kitchen, a lounge with a television on a cabinet, a meeting nook, and low
+ * partitions that give the place structure without hiding it from an isometric
+ * camera the way full-height walls do.
  */
 import { copyFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 /** Verified to exist in `assets/office/kenneykit/Models/GLTF format` (creative-brief.md "Props note"). */
 export const PROP_NAMES = [
+  // --- floor & zoning -------------------------------------------------
+  'floorFull',
+  'wallHalf', // low partitions: they separate rooms without hiding them from an isometric camera
+  'rugRectangle',
+  'rugRounded',
+  'rugSquare',
+  'rugDoormat',
+  // --- work bay -------------------------------------------------------
   'desk',
   'deskCorner',
   'chairDesk',
   'computerScreen',
   'computerKeyboard',
+  'computerMouse',
   'laptop',
+  'bookcaseOpen',
+  'bookcaseClosed',
+  'books',
+  // --- kitchen --------------------------------------------------------
+  'kitchenCabinet',
+  'kitchenCabinetDrawer',
+  'kitchenCabinetUpper',
+  'kitchenSink',
+  'kitchenStove',
+  'kitchenFridge',
+  'kitchenMicrowave',
   'kitchenCoffeeMachine',
+  'kitchenBlender',
+  'hoodModern',
+  'toaster',
+  'kitchenBar',
+  'kitchenBarEnd',
+  'stoolBar',
+  // --- lounge & tv ----------------------------------------------------
   'loungeSofa',
   'loungeSofaCorner',
+  'loungeSofaLong',
+  'loungeSofaOttoman',
   'loungeChairRelax',
+  'cabinetTelevision',
+  'televisionModern',
   'tableCoffee',
-  'wall',
-  'wallWindow',
-  'wallDoorway',
-  'doorwayOpen',
-  'floorFull',
+  'lampRoundFloor',
+  'speaker',
+  'pillow',
+  'pillowBlue',
+  'radio',
+  // --- meeting nook ---------------------------------------------------
+  'tableRound',
+  'chairRounded',
+  'coatRackStanding',
+  // --- greenery & odds ------------------------------------------------
   'pottedPlant',
   'plantSmall1',
-  'bookcaseOpen',
+  'plantSmall2',
+  'plantSmall3',
   'trashcan',
   'lampSquareFloor',
-  'rugRectangle',
-  'stoolBar',
-  'kitchenBar',
-  'televisionModern',
+  'sideTable',
   'cardboardBoxOpen',
   'bear',
-  'ceilingFan',
 ] as const;
 
 export interface CopyPropsResult {

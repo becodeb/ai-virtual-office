@@ -103,11 +103,23 @@ export function Floor({ layout }: FloorProps): JSX.Element {
     return cells;
   }, [layout.width, layout.height]);
 
+  const [plankA, plankB] = useMemo(() => {
+    const a: Cell[] = [];
+    const b: Cell[] = [];
+    for (const cell of tileCells) (cell[1] % 2 === 0 ? a : b).push(cell);
+    return [a, b] as const;
+  }, [tileCells]);
+
   return (
     <group>
-      {/* A warmer, slightly darker floor: the stock tile is close enough to the
-          furniture's own tone that desks and characters wash into it. */}
-      <InstancedProp name="floorFull" cells={tileCells} receiveShadow tint="#a87f5c" />
+      {/*
+        Two tones, alternating by row, so the floor reads as boards rather than
+        one flat plane. A single uniform colour is what makes a room look empty
+        even when it is furnished: there is nothing for the eye to measure the
+        furniture against.
+      */}
+      <InstancedProp name="floorFull" cells={plankA} receiveShadow tint="#a87f5c" />
+      <InstancedProp name="floorFull" cells={plankB} receiveShadow tint="#9c7452" />
     </group>
   );
 }

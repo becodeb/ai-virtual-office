@@ -10,7 +10,8 @@
     "start": "node dist/server.cjs",
     "build": "esbuild src/index.ts --bundle --platform=node --format=cjs --target=node20 --outfile=dist/server.cjs --external:bufferutil --external:utf-8-validate",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "floor": "node scripts/generate-floor.mjs"
   },
   "dependencies": {
     "@virtual-office/shared": "workspace:*",

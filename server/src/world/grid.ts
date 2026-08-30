@@ -90,7 +90,14 @@ export interface FloorLayout {
    * in it, and it blocks its cell so characters walk around it rather than
    * through it.
    */
-  decor: Array<{ cell: Cell; prop: string }>;
+  decor: Array<{
+    cell: Cell;
+    prop: string;
+    facingRad: number;
+    offset: readonly [number, number];
+    flat: boolean;
+    y: number;
+  }>;
 }
 
 type RawFacing = 'north' | 'south' | 'east' | 'west';
@@ -124,10 +131,25 @@ interface RawFloor {
   decor?: RawDecor[];
 }
 
-/** A purely cosmetic prop. It blocks its cell like any other furniture, but nothing routes to it. */
+/**
+ * A purely cosmetic prop. Nothing routes to it, and by default it blocks its
+ * cell like any other furniture.
+ *
+ * `offset` places it inside the cell rather than dead centre, which is what
+ * makes a continuous kitchen counter possible: the kit's units are 0.43 wide,
+ * so two of them sit side by side in one 1.0 cell.
+ *
+ * `flat` marks something you walk over — rugs are 0.01 tall and exist to give
+ * a zone an edge, not to be an obstacle.
+ */
 interface RawDecor {
   cell: [number, number];
   prop: string;
+  facing?: RawFacing;
+  offset?: [number, number];
+  flat?: boolean;
+  /** Height above the floor, for things that sit on top of other things (a TV on its cabinet). */
+  y?: number;
 }
 
 /**
@@ -200,7 +222,14 @@ export function parseFloorLayout(raw: RawFloor): FloorLayout {
       window: d.window ?? false,
     })),
     loungeSeats: raw.lounge.seats.map((s) => seatSocketFromCell(s.cell, s.facing)),
-    decor: (raw.decor ?? []).map((d) => ({ cell: d.cell, prop: d.prop })),
+    decor: (raw.decor ?? []).map((d) => ({
+      cell: d.cell,
+      prop: d.prop,
+      facingRad: d.facing === undefined ? 0 : facingToRad(d.facing),
+      offset: d.offset ?? [0, 0],
+      flat: d.flat ?? false,
+      y: d.y ?? 0,
+    })),
   };
 }
 
@@ -256,6 +285,8 @@ export class Grid {
     grid.set(layout.bearCell[0], layout.bearCell[1], CELL_BLOCKED);
     grid.set(layout.architectCell[0], layout.architectCell[1], CELL_BLOCKED);
     for (const item of layout.decor) {
+      // Rugs and doormats are walked over, not around.
+      if (item.flat) continue;
       grid.set(item.cell[0], item.cell[1], CELL_BLOCKED);
     }
     return grid;

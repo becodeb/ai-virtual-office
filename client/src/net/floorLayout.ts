@@ -48,7 +48,14 @@ export interface FloorLayout {
   desks: DeskLayout[];
   loungeSeats: SeatSocket[];
   /** Cosmetic furniture; blocks its cell server-side but is purely visual here. */
-  decor: Array<{ cell: Cell; prop: string }>;
+  decor: Array<{
+    cell: Cell;
+    prop: string;
+    facingRad: number;
+    offset: readonly [number, number];
+    flat: boolean;
+    y: number;
+  }>;
 }
 
 function isCell(value: unknown): value is Cell {

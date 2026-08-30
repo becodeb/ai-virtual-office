@@ -18,22 +18,26 @@ describe('DeskRegistry allocation', () => {
   it('allocates deterministically: same sequence of agents always gets the same desks', () => {
     const a = freshRegistry();
     const b = freshRegistry();
-    const idsA = Array.from({ length: 12 }, (_, i) => a.tryAllocate(`a${i}`)!.id);
-    const idsB = Array.from({ length: 12 }, (_, i) => b.tryAllocate(`a${i}`)!.id);
+    const count = a.desks.length;
+    const idsA = Array.from({ length: count }, (_, i) => a.tryAllocate(`a${i}`)!.id);
+    const idsB = Array.from({ length: count }, (_, i) => b.tryAllocate(`a${i}`)!.id);
     expect(idsA).toEqual(idsB);
   });
 
-  it('returns null once all 12 desks are occupied', () => {
+  it('returns null once every desk is occupied', () => {
     const registry = freshRegistry();
-    for (let i = 0; i < 12; i++) {
-      expect(registry.tryAllocate(`a${i}`)).not.toBeNull();
+    // Driven by the layout's own desk count so the floor plan can change
+    // without this test quietly asserting a number nobody maintains.
+    const total = registry.desks.length;
+    for (let i = 0; i < total; i++) {
+      expect(registry.tryAllocate(`a${i}`), `desk ${i} of ${total}`).not.toBeNull();
     }
-    expect(registry.tryAllocate('a12')).toBeNull();
+    expect(registry.tryAllocate(`a${total}`)).toBeNull();
   });
 
   it('hands a freed desk to the longest-waiting queued agent', () => {
     const registry = freshRegistry();
-    for (let i = 0; i < 12; i++) registry.tryAllocate(`a${i}`);
+    for (let i = 0; i < registry.desks.length; i++) registry.tryAllocate(`a${i}`);
 
     registry.enqueue('waiter-1', 100);
     registry.enqueue('waiter-2', 200);
@@ -57,7 +61,7 @@ describe('DeskRegistry allocation', () => {
 
   it('removeFromQueue drops a waiting agent without assigning it a desk', () => {
     const registry = freshRegistry();
-    for (let i = 0; i < 12; i++) registry.tryAllocate(`a${i}`);
+    for (let i = 0; i < registry.desks.length; i++) registry.tryAllocate(`a${i}`);
     registry.enqueue('waiter-1', 100);
     registry.removeFromQueue('waiter-1');
     expect(registry.waitingCount).toBe(0);

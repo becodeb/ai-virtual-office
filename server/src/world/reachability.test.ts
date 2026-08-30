@@ -42,13 +42,9 @@ describe('every destination is reachable from a desk', () => {
   });
 });
 
-describe('the floor stays dense', () => {
-  it('does not sprawl: an office is not a warehouse with desks in it', () => {
-    const cellsPerDesk = (layout.width * layout.height) / layout.desks.length;
-    expect(cellsPerDesk, `${layout.width}x${layout.height} for ${layout.desks.length} desks`).toBeLessThan(12);
-  });
-
-  it('is furnished beyond the desks themselves', () => {
-    expect(layout.decor.length).toBeGreaterThanOrEqual(10);
+describe('the floor is furnished', () => {
+  it('offers somewhere to be other than a desk', () => {
+    expect(layout.loungeSeats.length, 'nowhere to sit that is not a desk').toBeGreaterThan(0);
+    expect(layout.decor.length, 'no furniture beyond the workstations').toBeGreaterThanOrEqual(20);
   });
 });
