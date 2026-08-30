@@ -77,3 +77,23 @@ describe('IdentityStore', () => {
     expect(existsSync(filePath)).toBe(false);
   });
 });
+
+describe('touch', () => {
+  it('registers an unseen identity so its counters start from first sight', () => {
+    const file = join(mkdtempSync(join(tmpdir(), 'office-identity-')), 'identities.json');
+    const store = new IdentityStore({ filePath: file, debounceMs: 0 });
+    store.touch('idk-new');
+    store.flush();
+    expect(JSON.parse(readFileSync(file, 'utf-8'))['idk-new']).toBeDefined();
+    store.cancelPendingSave();
+  });
+
+  it('leaves an existing record untouched', () => {
+    const file = join(mkdtempSync(join(tmpdir(), 'office-identity-')), 'identities.json');
+    const store = new IdentityStore({ filePath: file, debounceMs: 0 });
+    store.incrementCoffeeCount('idk-known');
+    const before = store.get('idk-known');
+    expect(store.touch('idk-known')).toEqual(before);
+    store.cancelPendingSave();
+  });
+});

@@ -12,7 +12,8 @@
     "test": "vitest run",
     "typecheck": "pnpm -r typecheck",
     "dev:server": "pnpm --filter server dev",
-    "dev:client": "pnpm --filter client dev"
+    "dev:client": "pnpm --filter client dev",
+    "build": "pnpm --filter client build && pnpm --filter server build"
   },
   "devDependencies": {
     "typescript": "^5.6.0",

@@ -92,7 +92,7 @@ async function handleEvents(req: IncomingMessage, res: ServerResponse): Promise<
   const eventNow = Date.now();
   reduce(world, { kind: 'hook', payload: outcome.payload }, eventNow);
   applyP1OnHookEvent(world, outcome.payload, eventNow);
-  identities.get(outcome.payload.identityKey); // touch: ensures a record exists for later P1 writes
+  identities.touch(outcome.payload.identityKey);
   res.writeHead(204).end();
 }
 

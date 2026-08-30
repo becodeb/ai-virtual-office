@@ -69,6 +69,18 @@ export class IdentityStore {
     return this.records[identityKey] ?? defaultIdentityRecord();
   }
 
+  /**
+   * Registers an identity the first time it is seen, so its coffee count and
+   * completed tasks start accumulating from its very first event rather than
+   * from whenever it first happens to earn one. Returns the existing record
+   * untouched if there already is one, and schedules no write in that case.
+   */
+  touch(identityKey: string): IdentityRecord {
+    const existing = this.records[identityKey];
+    if (existing !== undefined) return existing;
+    return this.update(identityKey, {});
+  }
+
   /** Applies a partial update to `identityKey`'s record and schedules a debounced save. */
   update(identityKey: string, patch: Partial<IdentityRecord>): IdentityRecord {
     const current = this.records[identityKey] ?? defaultIdentityRecord();

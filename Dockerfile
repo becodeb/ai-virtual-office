@@ -21,14 +21,16 @@ COPY packages/assets-pipeline/package.json packages/assets-pipeline/
 COPY server/package.json server/
 COPY client/package.json client/
 COPY hooks/package.json hooks/
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --frozen-lockfile
+# No BuildKit cache mount here on purpose: it fails outright on the classic
+# builder, and this repo gets cloned onto whatever Docker its friends happen to
+# have. Layer caching already skips this step unless a package.json changes.
+RUN pnpm install --frozen-lockfile
 
 # --- build ------------------------------------------------------------------
 FROM deps AS build
 COPY . .
-# The client bundle plus the committed GLBs; the server as a single bundled file.
-RUN pnpm --filter client build && pnpm --filter server build
+# The client bundle plus the committed GLBs, then the server as one bundled file.
+RUN pnpm build
 
 # --- runtime ----------------------------------------------------------------
 FROM node:22-alpine AS runtime
