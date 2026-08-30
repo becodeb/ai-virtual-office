@@ -77,6 +77,8 @@ export interface FloorLayout {
   kitchenCoffeeMachineCell: Cell;
   /** A free cell next to the coffee machine — the actual A* pathing target (the machine's own cell is blocked). */
   kitchenStandCell: Cell;
+  /** Where a character stands to cook. Falls back to the coffee spot on a floor plan without a stove. */
+  stoveStandCell: Cell;
   meetingRoomScreenCell: Cell;
   /** The teddy bear's own cell (P1 teddy-bear debugging), blocked like any other prop. */
   bearCell: Cell;
@@ -123,7 +125,7 @@ interface RawFloor {
   height: number;
   elevatorCell: [number, number];
   fireExitCell: [number, number];
-  kitchen: { coffeeMachineCell: [number, number]; standCell: [number, number] };
+  kitchen: { coffeeMachineCell: [number, number]; standCell: [number, number]; stoveStandCell?: [number, number] };
   meetingRoom: { screenCell: [number, number] };
   bear: { cell: [number, number]; standCell: [number, number] };
   architect: { cell: [number, number] };
@@ -231,6 +233,7 @@ export function parseFloorLayout(raw: RawFloor): FloorLayout {
     fireExitCell: raw.fireExitCell,
     kitchenCoffeeMachineCell: raw.kitchen.coffeeMachineCell,
     kitchenStandCell: raw.kitchen.standCell,
+    stoveStandCell: raw.kitchen.stoveStandCell ?? raw.kitchen.standCell,
     meetingRoomScreenCell: raw.meetingRoom.screenCell,
     bearCell: raw.bear.cell,
     bearStandCell: raw.bear.standCell,

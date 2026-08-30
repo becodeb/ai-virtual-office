@@ -30,6 +30,11 @@ export const AGENT_STATE_CLIP: Record<AgentState, string> = {
   SEATED_IDLE: 'Sitting_Idle_Loop',
   // Same reason as QUEUED: resting on a couch is a seated pose.
   LOUNGING: 'Sitting_Idle_Loop',
+  // Standing at the counter, hands busy. The pack has no "cooking" clip; the
+  // watering loop is the closest thing to working over a surface.
+  COOKING: 'Farm_Watering',
+  // Sat on the couch in front of the television.
+  WATCHING_TV: 'Sitting_Idle_Loop',
   // Handoff / speech-bubble gesture.
   DELEGATING: 'Idle_Talking_Loop',
   REPORTING: 'Idle_Talking_Loop',

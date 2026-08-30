@@ -54,6 +54,8 @@ const lounge = [
 ];
 
 const fixed = {
+  // The stove is part of the counter run at [7,0]; this is where a cook stands.
+  stoveStand: [7, 1],
   elevator: [5, 6],
   fireExit: [5, 0],
   coffee: [6, 0],
@@ -163,6 +165,7 @@ const base = new Set([
   ...['coffee', 'screen', 'bear', 'architect'].map((k) => key(fixed[k])),
 ]);
 const destinations = [
+  fixed.stoveStand,
   fixed.coffeeStand,
   fixed.bearStand,
   fixed.fireExit,
@@ -274,7 +277,7 @@ writeFileSync(
       zones,
       elevatorCell: fixed.elevator,
       fireExitCell: fixed.fireExit,
-      kitchen: { coffeeMachineCell: fixed.coffee, standCell: fixed.coffeeStand },
+      kitchen: { coffeeMachineCell: fixed.coffee, standCell: fixed.coffeeStand, stoveStandCell: fixed.stoveStand },
       meetingRoom: { screenCell: fixed.screen },
       bear: { cell: fixed.bear, standCell: fixed.bearStand },
       architect: { cell: fixed.architect },

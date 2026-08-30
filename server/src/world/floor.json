@@ -60,6 +60,10 @@
     "standCell": [
       6,
       1
+    ],
+    "stoveStandCell": [
+      7,
+      1
     ]
   },
   "meetingRoom": {

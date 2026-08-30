@@ -54,6 +54,10 @@ export const ROLE_HYSTERESIS_STREAK = 3;
 export const AGENT_MOVE_CELLS_PER_SEC = 1.2;
 /** P1 coffee runs: how long an agent must sit idle before it wanders off for coffee, and the minimum gap between runs. */
 export const COFFEE_IDLE_THRESHOLD_MS = 45_000;
+/** How long a character stands at the stove before heading back. */
+export const COOK_DURATION_MS = 25_000;
+/** How long a character watches television before heading back. */
+export const TV_DURATION_MS = 35_000;
 /** P1 Architect: how long the "no" head-shake reaction plays before reverting to folded arms. */
 export const ARCHITECT_REACTION_MS = 4_000;
 export const ARCHITECT_NPC_ID = 'npc-architect';
@@ -70,6 +74,10 @@ export type ArrivalAction =
   | 'completeZombieLap'
   | 'arriveAtCoffeeMachine'
   | 'returnFromCoffee'
+  | 'arriveAtStove'
+  | 'returnFromStove'
+  | 'arriveAtCouch'
+  | 'returnFromCouch'
   | 'arriveAtBear'
   | 'returnFromBear';
 
@@ -124,6 +132,10 @@ export interface AgentRecord {
   lastTestRunOutcome: 'pass' | 'fail' | null;
   /** P1 coffee runs: currently walking to/from the kitchen. */
   onCoffeeRun: boolean;
+  /** When the current break ends and the agent heads back to its desk. */
+  breakUntil: number | null;
+  /** The couch this agent claimed for a television break, so two never share one. */
+  couchCell: Cell | null;
   /** P1 coffee runs: when this agent last went for coffee, to space runs out. */
   lastCoffeeRunAt: number | null;
   /** P1 zombie hour: the role's skin/badge before the Revenant swap, restored if the chain is cancelled. */
@@ -171,6 +183,43 @@ function createArchitectNpc(layout: FloorLayout): NpcRecord {
     clip: 'Idle_FoldArms_Loop',
     clipUntil: null,
   };
+}
+
+interface BreakChoice {
+  kind: 'coffee' | 'stove' | 'couch';
+  target: Cell;
+  action: ArrivalAction;
+}
+
+/**
+ * Picks where an idle character goes on its break.
+ *
+ * Deterministic per agent and per attempt, so the world stays reproducible for
+ * tests, but varied enough that the same session does not make the same trip
+ * every time. A couch is only offered when one is actually free — two people
+ * sharing a cushion reads worse than one person never leaving their desk.
+ */
+function pickBreak(agent: AgentRecord, world: WorldState, now: number): BreakChoice | null {
+  const freeCouch = world.layout.loungeSeats.find((seat) => {
+    for (const other of world.agents.values()) {
+      if (other.couchCell !== null && other.couchCell[0] === seat.cell[0] && other.couchCell[1] === seat.cell[1]) {
+        return false;
+      }
+    }
+    return true;
+  });
+
+  const options: BreakChoice[] = [
+    { kind: 'coffee', target: world.layout.kitchenStandCell, action: 'arriveAtCoffeeMachine' },
+    { kind: 'stove', target: world.layout.stoveStandCell, action: 'arriveAtStove' },
+  ];
+  if (freeCouch !== undefined) {
+    options.push({ kind: 'couch', target: freeCouch.cell, action: 'arriveAtCouch' });
+  }
+
+  let hash = Math.floor(now / 1000);
+  for (let i = 0; i < agent.agentId.length; i++) hash = (hash * 31 + agent.agentId.charCodeAt(i)) >>> 0;
+  return options[hash % options.length] ?? null;
 }
 
 /** role-classification spec, decision 6: a diff signal (`any`/`// TODO`/>500-line file) briefly plays the Architect's head-shake. */
@@ -397,6 +446,8 @@ function newAgentRecord(opts: {
     pendingBashCommands: new Map(),
     lastTestRunOutcome: null,
     onCoffeeRun: false,
+    breakUntil: null,
+    couchCell: null,
     lastCoffeeRunAt: null,
     preZombieSkin: null,
     preZombieBadge: null,
@@ -705,6 +756,45 @@ function finishMovement(world: WorldState, agent: AgentRecord, now: number, effe
       agent.onCoffeeRun = false;
       break;
     }
+    case 'arriveAtStove': {
+      agent.cell = finalCell;
+      settleAt(agent, {
+        cell: finalCell,
+        position: { x: finalCell[0] + 0.5, y: 0, z: finalCell[1] + 0.5 },
+        // Face the counter the stove sits on, which is the row above.
+        facingRad: Math.PI,
+      });
+      agent.state = 'COOKING';
+      agent.breakUntil = now + COOK_DURATION_MS;
+      break;
+    }
+    case 'returnFromStove': {
+      const desk = agent.deskId !== null ? world.desks.getDesk(agent.deskId) : undefined;
+      if (desk !== undefined) settleAt(agent, seatPosition(desk.seat));
+      agent.state = 'SEATED_IDLE';
+      agent.lastActivityAt = now;
+      agent.onCoffeeRun = false;
+      break;
+    }
+    case 'arriveAtCouch': {
+      agent.cell = finalCell;
+      const couch = world.layout.loungeSeats.find(
+        (seat) => seat.cell[0] === finalCell[0] && seat.cell[1] === finalCell[1]
+      );
+      if (couch !== undefined) settleAt(agent, seatPosition(couch));
+      agent.state = 'WATCHING_TV';
+      agent.breakUntil = now + TV_DURATION_MS;
+      break;
+    }
+    case 'returnFromCouch': {
+      const desk = agent.deskId !== null ? world.desks.getDesk(agent.deskId) : undefined;
+      if (desk !== undefined) settleAt(agent, seatPosition(desk.seat));
+      agent.state = 'SEATED_IDLE';
+      agent.lastActivityAt = now;
+      agent.onCoffeeRun = false;
+      agent.couchCell = null;
+      break;
+    }
     case 'arriveAtBear': {
       agent.cell = finalCell;
       // Closest available state to "standing somewhere that isn't its own
@@ -777,7 +867,14 @@ function tickAgent(world: WorldState, agent: AgentRecord, now: number, effects: 
     despawnAgent(world, agent, now);
   }
 
-  // P1 coffee runs: an agent idle long enough (and not already out for one) wanders to the kitchen and back.
+  // Off-desk breaks.
+  //
+  // The floor has a kitchen and a television, and until now nobody ever used
+  // either: characters sat perfectly still until they timed out, which is what
+  // made a furnished office still look deserted. An agent that has been idle
+  // long enough picks somewhere to go — coffee, the stove, or the couch — and
+  // the choice is derived from its own id so the same session does not do the
+  // same thing every single time.
   if (
     agent.state === 'SEATED_IDLE' &&
     !agent.isSubagent &&
@@ -787,10 +884,28 @@ function tickAgent(world: WorldState, agent: AgentRecord, now: number, effects: 
     now - agent.lastActivityAt >= COFFEE_IDLE_THRESHOLD_MS &&
     (agent.lastCoffeeRunAt === null || now - agent.lastCoffeeRunAt >= COFFEE_IDLE_THRESHOLD_MS)
   ) {
-    agent.onCoffeeRun = true;
-    agent.lastCoffeeRunAt = now;
+    const choice = pickBreak(agent, world, now);
+    if (choice !== null) {
+      agent.onCoffeeRun = true;
+      agent.lastCoffeeRunAt = now;
+      agent.state = 'WALKING';
+      if (choice.kind === 'couch') agent.couchCell = choice.target;
+      agent.movement = planMovement(world.grid, agent.cell, choice.target, choice.action, now);
+    }
+  }
+
+  // A break that has run its course sends the agent back to its desk.
+  if (
+    agent.breakUntil !== null &&
+    now >= agent.breakUntil &&
+    (agent.state === 'COOKING' || agent.state === 'WATCHING_TV')
+  ) {
+    const desk = agent.deskId !== null ? world.desks.getDesk(agent.deskId) : undefined;
+    const back = desk?.seat.standCell ?? world.layout.elevatorCell;
+    const action = agent.state === 'COOKING' ? 'returnFromStove' : 'returnFromCouch';
+    agent.breakUntil = null;
     agent.state = 'WALKING';
-    agent.movement = planMovement(world.grid, agent.cell, world.layout.kitchenStandCell, 'arriveAtCoffeeMachine', now);
+    agent.movement = planMovement(world.grid, agent.cell, back, action, now);
   }
 
   // Heartbeat timeout chain.

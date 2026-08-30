@@ -11,6 +11,11 @@ export const AGENT_STATES = [
   'SEATED_TYPING',
   'SEATED_IDLE',
   'LOUNGING',
+  // Off-desk breaks. The office has a kitchen and a television; a session that
+  // has gone quiet for a while goes and uses one instead of sitting perfectly
+  // still at a desk, which is what an empty-looking office is made of.
+  'COOKING',
+  'WATCHING_TV',
   'DELEGATING',
   'REPORTING',
   'SLEEPING',

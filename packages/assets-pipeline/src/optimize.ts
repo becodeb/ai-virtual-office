@@ -65,6 +65,29 @@ export interface BakeResult {
  * above zero as well, because a stylised character with a pure-black limb has
  * no silhouette against a lit floor no matter how the rest is graded.
  */
+/**
+ * Slots whose source colour is not the colour the slot is meant to be.
+ *
+ * `Skin` arrives as #030303 — an achromatic near-black, not a skin tone at any
+ * exposure. Lifting it only yields grey, and a thin grey forearm against a lit
+ * floor reads as a stick rather than an arm. The pack does not encode skin
+ * colour in this slot at all, so it is supplied here.
+ *
+ * A small palette, chosen per character rather than shared, so a room full of
+ * people is not a room full of the same person.
+ */
+const SKIN_TONES = ['#c98d63', '#e0ac86', '#8d5524', '#f1c9a5', '#a26d3d', '#d99b6c'] as const;
+
+/** The named slots whose colour is overridden rather than lifted. */
+export function overrideForSlot(slotName: string, variant: number): THREE.Color | null {
+  const name = slotName.toLowerCase();
+  if (name === 'skin') return new THREE.Color(SKIN_TONES[variant % SKIN_TONES.length]);
+  // The face is authored near-white; tint it with the same tone so a head does
+  // not read as a mask floating above a differently-coloured body.
+  if (name === 'face') return new THREE.Color(SKIN_TONES[variant % SKIN_TONES.length]).multiplyScalar(1.08);
+  return null;
+}
+
 export function liftSourceColour(source: THREE.Color): THREE.Color {
   const lifted = source.clone().convertLinearToSRGB();
   const FLOOR = 0.18;
@@ -82,7 +105,12 @@ export function liftSourceColour(source: THREE.Color): THREE.Color {
  * index), using the geometry's existing (pre-merge) `.groups`. Must run
  * before `indexGeometry` and before `collapseGroups`.
  */
-export function bakeVertexColorsAndSlots(geometry: THREE.BufferGeometry, materials: THREE.Material[]): BakeResult {
+export function bakeVertexColorsAndSlots(
+  geometry: THREE.BufferGeometry,
+  materials: THREE.Material[],
+  /** Picks which skin tone this character gets; stable per skin name. */
+  variant = 0
+): BakeResult {
   const vertexCount = geometry.attributes.position!.count;
   const colorArray = new Float32Array(vertexCount * 3);
   const slotArray = new Float32Array(vertexCount);
@@ -94,7 +122,7 @@ export function bakeVertexColorsAndSlots(geometry: THREE.BufferGeometry, materia
     const material = materials[slotIndex];
     if (!material) throw new Error(`optimize: group references missing materialIndex ${slotIndex}`);
     const source = (material as THREE.MeshPhongMaterial | THREE.MeshStandardMaterial).color ?? new THREE.Color(1, 1, 1);
-    const color = liftSourceColour(source);
+    const color = overrideForSlot(material.name ?? '', variant) ?? liftSourceColour(source);
 
     for (let v = group.start; v < group.start + group.count; v++) {
       colorArray[v * 3] = color.r;

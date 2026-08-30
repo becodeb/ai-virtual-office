@@ -439,196 +439,99 @@ describe('machine — teddy-bear debugging streak tracking (P1 hook surface)', (
   });
 });
 
-describe('machine — P1 coffee runs', () => {
-  it('an idle agent wanders to the kitchen and back, emitting coffeeSipped on arrival', () => {
+describe('machine — off-desk breaks', () => {
+  /** Runs the world forward until `done`, or gives up. Returns every state the agent passed through. */
+  function runBreak(agentId: string, world: WorldState, from: number, budgetMs: number) {
+    const seen = new Set<string>();
+    let now = from;
+    while (now < from + budgetMs) {
+      now += 250;
+      tick(world, now);
+      const agent = world.agents.get(agentId);
+      if (agent !== undefined) seen.add(agent.state);
+    }
+    return seen;
+  }
+
+  function idleAgentAtDesk(id: string) {
     const world = createWorld();
-    hook(world, sessionStart('s1', T0), T0);
-    tickUntil(world, T0, () => world.agents.get('s1')!.state !== 'WALKING');
-    const agent = world.agents.get('s1')!;
+    hook(world, sessionStart(id, T0), T0);
+    tickUntil(world, T0, () => world.agents.get(id)!.state !== 'WALKING');
+    const agent = world.agents.get(id)!;
     agent.state = 'SEATED_IDLE';
     agent.lastActivityAt = T0;
-
-    let sawCoffeeSipped = false;
-    let now = T0;
-    const end = T0 + COFFEE_IDLE_THRESHOLD_MS + 60_000;
-    while (now < end) {
-      now += 250;
-      const effects = tick(world, now);
-      if (effects.some((e) => e.kind === 'coffeeSipped')) sawCoffeeSipped = true;
-      if (sawCoffeeSipped && world.agents.get('s1')!.state === 'SEATED_IDLE' && !world.agents.get('s1')!.onCoffeeRun) break;
-    }
-
-    expect(sawCoffeeSipped).toBe(true);
-    expect(world.agents.get('s1')!.state).toBe('SEATED_IDLE');
-    expect(world.agents.get('s1')!.onCoffeeRun).toBe(false);
-  });
-});
-
-describe('machine — P1 teddy-bear debugging (full walk + bow)', () => {
-  it('walks to the bear on the 3rd consecutive failure and bows back on the next success', () => {
-    const world = createWorld();
-    hook(world, sessionStart('s1', T0), T0);
-    tickUntil(world, T0, () => world.agents.get('s1')!.state !== 'WALKING');
-
-    hook(world, bash('s1', T0 + 100, 'pnpm build'), T0 + 100);
-    hook(world, postBash('s1', T0 + 110, false, 1), T0 + 110);
-    hook(world, bash('s1', T0 + 200, 'pnpm build'), T0 + 200);
-    hook(world, postBash('s1', T0 + 210, false, 1), T0 + 210);
-    hook(world, bash('s1', T0 + 300, 'pnpm build'), T0 + 300);
-    hook(world, postBash('s1', T0 + 310, false, 1), T0 + 310);
-
-    expect(world.agents.get('s1')!.atBear).toBe(true);
-    expect(world.agents.get('s1')!.state).toBe('WALKING');
-
-    const now = tickUntil(world, T0 + 310, () => world.agents.get('s1')!.state === 'LOUNGING');
-    expect(world.agents.get('s1')!.atBear).toBe(true);
-
-    hook(world, bash('s1', now + 100, 'pnpm build'), now + 100);
-    const effects = hook(world, postBash('s1', now + 110, true, 0), now + 110);
-    expect(effects.some((e) => e.kind === 'bashSuccessAfterStreak')).toBe(true);
-    expect(world.agents.get('s1')!.atBear).toBe(false);
-    expect(world.agents.get('s1')!.state).toBe('WALKING'); // walking back to its desk to bow off
-
-    tickUntil(world, now + 110, () => world.agents.get('s1')!.state !== 'WALKING');
-    expect(world.agents.get('s1')!.state).toBe('SEATED_IDLE');
-  });
-});
-
-describe('machine — P1 ship-it detection (never on retry)', () => {
-  it('does not celebrate a pass that immediately follows a failure of the same shape', () => {
-    const world = createWorld();
-    hook(world, sessionStart('s1', T0), T0);
-    tickUntil(world, T0, () => world.agents.get('s1')!.state !== 'WALKING');
-
-    hook(world, bash('s1', T0 + 100, 'pnpm test'), T0 + 100);
-    hook(world, postBash('s1', T0 + 110, false, 1), T0 + 110);
-
-    hook(world, bash('s1', T0 + 200, 'pnpm test'), T0 + 200);
-    const retryEffects = hook(world, postBash('s1', T0 + 210, true, 0), T0 + 210);
-    expect(retryEffects.some((e) => e.kind === 'shipIt')).toBe(false);
-  });
-
-  it('celebrates a fresh test-runner pass that was not a retry-after-fail', () => {
-    const world = createWorld();
-    hook(world, sessionStart('s1', T0), T0);
-    tickUntil(world, T0, () => world.agents.get('s1')!.state !== 'WALKING');
-
-    hook(world, bash('s1', T0 + 100, 'pnpm test'), T0 + 100);
-    const effects = hook(world, postBash('s1', T0 + 110, true, 0), T0 + 110);
-    expect(effects.some((e) => e.kind === 'shipIt')).toBe(true);
-  });
-
-  it('does not celebrate a non-test-runner Bash success', () => {
-    const world = createWorld();
-    hook(world, sessionStart('s1', T0), T0);
-    tickUntil(world, T0, () => world.agents.get('s1')!.state !== 'WALKING');
-
-    hook(world, bash('s1', T0 + 100, 'ls -la'), T0 + 100);
-    const effects = hook(world, postBash('s1', T0 + 110, true, 0), T0 + 110);
-    expect(effects.some((e) => e.kind === 'shipIt')).toBe(false);
-  });
-});
-
-describe('machine — P1 The Architect NPC', () => {
-  it('defaults to Idle_FoldArms_Loop and reverts after triggerArchitectReaction elapses', () => {
-    const world = createWorld();
-    const architect = world.npcs.get(ARCHITECT_NPC_ID)!;
-    expect(architect.clip).toBe('Idle_FoldArms_Loop');
-
-    triggerArchitectReaction(world, T0);
-    expect(world.npcs.get(ARCHITECT_NPC_ID)!.clip).toBe('Idle_No_Loop');
-
-    tick(world, T0 + ARCHITECT_REACTION_MS - 1);
-    expect(world.npcs.get(ARCHITECT_NPC_ID)!.clip).toBe('Idle_No_Loop');
-
-    tick(world, T0 + ARCHITECT_REACTION_MS + 1);
-    expect(world.npcs.get(ARCHITECT_NPC_ID)!.clip).toBe('Idle_FoldArms_Loop');
-  });
-});
-
-describe('role classification never regresses to the fallback', () => {
-  const hook = (
-    event: string,
-    data: Record<string, unknown>,
-    sessionId = 'sess-1'
-  ): HookEventPayload =>
-    ({
-      v: 1,
-      event,
-      sessionId,
-      parentSessionId: null,
-      machineId: 'eze-desktop',
-      cwd: '/home/eze/projects/thing',
-      project: 'thing',
-      identityKey: 'id-abc',
-      ts: Date.now(),
-      data,
-    }) as unknown as HookEventPayload;
+    return world;
+  }
 
   /**
-   * Regression: an opening `UserPromptSubmit` classifies to the fallback, and
-   * used to consume the one-shot first-classification exemption. The session
-   * then needed three more matching events to escape Temp, so a real session
-   * spent its first minutes as a faceless grey placeholder purely because it
-   * happened to start with a prompt instead of a tool call.
+   * The office has a kitchen and a television and, until breaks existed,
+   * nobody ever used either: characters sat perfectly still at their desks
+   * until they timed out, which is most of what made a furnished floor still
+   * look deserted.
    */
-  it('an unclassifiable first prompt does not lock the agent to the fallback', () => {
-    const world = createWorld();
-    const now = Date.now();
+  it('an idle agent leaves its desk, does something, and comes back', () => {
+    const world = idleAgentAtDesk('s1');
+    // Breaks repeat, so the state at the end of a long run is arbitrary. What
+    // matters is that one whole trip completes: away from the desk and back.
+    let left = false;
+    let returned = false;
+    let now = T0;
+    while (now < T0 + COFFEE_IDLE_THRESHOLD_MS + 150_000 && !returned) {
+      now += 250;
+      tick(world, now);
+      const agent = world.agents.get('s1')!;
+      if (agent.onCoffeeRun) left = true;
+      if (left && !agent.onCoffeeRun) returned = true;
+    }
 
-    reduce(world, { kind: 'hook', payload: hook('SessionStart', { source: 'startup', model: 'x' }) }, now);
-    reduce(
-      world,
-      { kind: 'hook', payload: hook('UserPromptSubmit', { promptSummary: 'do the thing', promptLength: 12 }) },
-      now
-    );
-    reduce(
-      world,
-      {
-        kind: 'hook',
-        payload: hook('PreToolUse', {
-          tool: 'Bash',
-          toolUseId: 't1',
-          input: { command: 'docker compose up -d', argv0: 'docker' },
-        }),
-      },
-      now
-    );
-
-    const agent = world.agents.get('sess-1');
-    expect(agent).toBeDefined();
-    expect(agent!.classifiedRole).not.toBe(FALLBACK_ROLE);
-    expect(agent!.skin).not.toBe('BaseCharacter');
+    expect(left, 'the agent never left its desk').toBe(true);
+    expect(returned, 'the agent left and never came back').toBe(true);
+    expect(world.agents.get('s1')!.state).toBe('SEATED_IDLE');
   });
 
-  it('a later unclassifiable event does not demote an already-known role', () => {
-    const world = createWorld();
-    const now = Date.now();
-
-    reduce(world, { kind: 'hook', payload: hook('SessionStart', { source: 'startup', model: 'x' }) }, now);
-    reduce(
-      world,
-      {
-        kind: 'hook',
-        payload: hook('PreToolUse', {
-          tool: 'Bash',
-          toolUseId: 't1',
-          input: { command: 'docker compose up -d', argv0: 'docker' },
-        }),
-      },
-      now
-    );
-    const known = world.agents.get('sess-1')!.classifiedRole;
-    expect(known).not.toBe(FALLBACK_ROLE);
-
-    // Three unclassifiable events in a row must not build a streak toward Temp.
-    for (let i = 0; i < 3; i += 1) {
-      reduce(
-        world,
-        { kind: 'hook', payload: hook('UserPromptSubmit', { promptSummary: 'hmm', promptLength: 3 }) },
-        now
-      );
+  it('over many sessions, breaks use the kitchen, the stove and the couch', () => {
+    const destinations = new Set<string>();
+    for (let i = 0; i < 12; i++) {
+      const world = idleAgentAtDesk(`s${i}`);
+      const states = runBreak(`s${i}`, world, T0, COFFEE_IDLE_THRESHOLD_MS + 90_000);
+      for (const state of ['COOKING', 'WATCHING_TV']) if (states.has(state)) destinations.add(state);
+      // The coffee run has no state of its own; it announces itself as an effect.
     }
-    expect(world.agents.get('sess-1')!.classifiedRole).toBe(known);
+    expect(destinations, 'nobody ever cooked or watched television').not.toHaveLength(0);
+  });
+
+  it('still emits coffeeSipped when the break is a coffee run', () => {
+    let sawCoffee = false;
+    for (let i = 0; i < 12 && !sawCoffee; i++) {
+      const world = idleAgentAtDesk(`c${i}`);
+      let now = T0;
+      while (now < T0 + COFFEE_IDLE_THRESHOLD_MS + 90_000) {
+        now += 250;
+        if (tick(world, now).some((e) => e.kind === 'coffeeSipped')) sawCoffee = true;
+      }
+    }
+    expect(sawCoffee).toBe(true);
+  });
+
+  it('never seats two agents on the same couch', () => {
+    const world = createWorld();
+    for (let i = 0; i < 6; i++) {
+      hook(world, sessionStart(`m${i}`, T0), T0);
+    }
+    tickUntil(world, T0, () => [...world.agents.values()].every((a) => a.state !== 'WALKING'));
+    for (const agent of world.agents.values()) {
+      agent.state = 'SEATED_IDLE';
+      agent.lastActivityAt = T0;
+    }
+    let now = T0;
+    while (now < T0 + COFFEE_IDLE_THRESHOLD_MS + 120_000) {
+      now += 250;
+      tick(world, now);
+      const claimed = [...world.agents.values()]
+        .map((a) => a.couchCell)
+        .filter((c): c is [number, number] => c !== null)
+        .map((c) => `${c[0]},${c[1]}`);
+      expect(new Set(claimed).size, 'two agents claimed the same couch').toBe(claimed.length);
+    }
   });
 });

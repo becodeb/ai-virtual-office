@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import {
   TARGET_STANDING_HEIGHT,
   liftSourceColour,
+  overrideForSlot,
   assertSlotColorConsistency,
   bakeVertexColorsAndSlots,
   collapseGroups,
@@ -57,16 +58,17 @@ describe('bakeVertexColorsAndSlots', () => {
     const color = geometry.attributes['color']!;
     expect(slot.getX(0)).toBe(0); // Skin is materials[0]
     expect(slot.getX(6)).toBe(1); // Shirt is materials[1]
-    // Colours are lifted out of the pack's near-black range on the way in
-    // (see `liftSourceColour`), so compare against the lift rather than the raw
-    // material value — but the hue must survive: red stays red, blue stays blue.
-    const red = liftSourceColour(new THREE.Color(1, 0, 0));
-    const blue = liftSourceColour(new THREE.Color(0, 0, 1));
-    expect(color.getX(0)).toBeCloseTo(red.r, 5);
-    expect(color.getZ(0)).toBeCloseTo(red.b, 5);
-    expect(color.getX(0)).toBeGreaterThan(color.getZ(0)); // still red
-    expect(color.getZ(6)).toBeCloseTo(blue.b, 5);
-    expect(color.getZ(6)).toBeGreaterThan(color.getX(6)); // still blue
+    // `Skin` is an overridden slot — the pack stores an achromatic near-black
+    // there, never a skin tone — so it comes back as the supplied tone.
+    const skin = overrideForSlot('Skin', 0)!;
+    expect(color.getX(0)).toBeCloseTo(skin.r, 5);
+    expect(color.getY(0)).toBeCloseTo(skin.g, 5);
+
+    // `Shirt` is not overridden: it keeps its own colour, lifted, and its hue
+    // must survive the lift — a blue shirt must not come back grey.
+    const shirt = liftSourceColour(new THREE.Color(0, 0, 1));
+    expect(color.getZ(6)).toBeCloseTo(shirt.b, 5);
+    expect(color.getZ(6)).toBeGreaterThan(color.getX(6));
   });
 
   it('accepts arbitrary material names — real skins do not share one fixed slot palette', () => {

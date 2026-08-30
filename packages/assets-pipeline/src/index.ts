@@ -58,6 +58,13 @@ function parseSkinsArg(argv: string[]): SkinName[] {
   return value.split(',').map((s) => s.trim()) as SkinName[];
 }
 
+/** A stable per-skin number, so the same character always gets the same tone. */
+function skinVariant(skinName: string): number {
+  let hash = 0;
+  for (let i = 0; i < skinName.length; i++) hash = (hash * 31 + skinName.charCodeAt(i)) >>> 0;
+  return hash;
+}
+
 async function main() {
   const t0 = Date.now();
   const skins = parseSkinsArg(process.argv.slice(2));
@@ -116,7 +123,7 @@ async function main() {
   // Determine the normalization factor once, from the reference skin's own geometry,
   // then reuse it for every other skin and for the shared clips (single-rig invariant).
   const referenceMaterials = Array.isArray(referenceSkinned.material) ? referenceSkinned.material : [referenceSkinned.material];
-  const referenceBake = bakeVertexColorsAndSlots(referenceSkinned.geometry, referenceMaterials);
+  const referenceBake = bakeVertexColorsAndSlots(referenceSkinned.geometry, referenceMaterials, skinVariant(REFERENCE_SKIN));
   collapseGroups(referenceSkinned.geometry);
   const referenceIndexed = indexGeometry(referenceSkinned.geometry);
   console.log(
@@ -179,7 +186,7 @@ async function main() {
       group = loadFbx(sourceFbx);
       mesh = findSkinnedMesh(group);
       const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-      const bake = bakeVertexColorsAndSlots(mesh.geometry, materials);
+      const bake = bakeVertexColorsAndSlots(mesh.geometry, materials, skinVariant(skin));
       slotNames = bake.slotNames;
       collapseGroups(mesh.geometry);
       const indexed = indexGeometry(mesh.geometry);

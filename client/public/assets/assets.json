@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-30T16:25:56.552Z",
+  "generatedAt": "2026-08-30T16:33:49.513Z",
   "clips": [
     {
       "name": "Crouch_Fwd_Loop",
@@ -342,7 +342,7 @@
     {
       "skin": "Worker_Male",
       "file": "characters/Worker_Male.glb",
-      "sizeBytes": 351128,
+      "sizeBytes": 351160,
       "sourceHash": "66319ebf1151ffada21b43f59896b962133f823bb9f4dff647dbd1a644db6a34",
       "slotNames": [
         "Skin",
@@ -356,7 +356,7 @@
     {
       "skin": "Worker_Female",
       "file": "characters/Worker_Female.glb",
-      "sizeBytes": 611328,
+      "sizeBytes": 611360,
       "sourceHash": "3c0f386df2a4c487281f9406e7dc08e28f8ab90c9ef44a06c49d62eaf423073a",
       "slotNames": [
         "Skin",
@@ -371,7 +371,7 @@
     {
       "skin": "Chef_Male",
       "file": "characters/Chef_Male.glb",
-      "sizeBytes": 585556,
+      "sizeBytes": 585588,
       "sourceHash": "50b2fc0dd7337e91f574639a4eb74047f77f351e649d010a53e88f66ce35c919",
       "slotNames": [
         "Skin",
@@ -387,7 +387,7 @@
     {
       "skin": "Chef_Female",
       "file": "characters/Chef_Female.glb",
-      "sizeBytes": 812120,
+      "sizeBytes": 812156,
       "sourceHash": "a12cd7b16b51dbd63330d661c8a382c6c1170a18dbd658ea6b61807f8ff7b07d",
       "slotNames": [
         "Skin",
@@ -402,7 +402,7 @@
     {
       "skin": "Casual_Male",
       "file": "characters/Casual_Male.glb",
-      "sizeBytes": 642972,
+      "sizeBytes": 643004,
       "sourceHash": "00489f0f7825ec0226c6f9097fdc6db8b25c5639bd6828f354c6d7c10c89c777",
       "slotNames": [
         "Skin",
@@ -416,7 +416,7 @@
     {
       "skin": "Casual_Female",
       "file": "characters/Casual_Female.glb",
-      "sizeBytes": 653200,
+      "sizeBytes": 653232,
       "sourceHash": "b1e5cb8e152bf30fa23956f47698b8f93c9532f416b29539e1297781fe12184f",
       "slotNames": [
         "Skin",
@@ -430,7 +430,7 @@
     {
       "skin": "OldClassy_Male",
       "file": "characters/OldClassy_Male.glb",
-      "sizeBytes": 578764,
+      "sizeBytes": 578796,
       "sourceHash": "7d383cf88a42c5090e43f24e395660d4353f7f0043d70f3eeff3dd220bff65a1",
       "slotNames": [
         "Skin",
@@ -446,7 +446,7 @@
     {
       "skin": "OldClassy_Female",
       "file": "characters/OldClassy_Female.glb",
-      "sizeBytes": 696228,
+      "sizeBytes": 696264,
       "sourceHash": "f996c724869c8a74ae48314d9dc8e610cfbd8f8191696d7f177e9aac6442794d",
       "slotNames": [
         "Skin",
@@ -462,7 +462,7 @@
     {
       "skin": "Doctor_Male_Young",
       "file": "characters/Doctor_Male_Young.glb",
-      "sizeBytes": 643460,
+      "sizeBytes": 643496,
       "sourceHash": "290195442457060528d6ba8ee7ad771fecf5a8841b10bc4417ce6ab9c59b63f4",
       "slotNames": [
         "Hair",
@@ -476,7 +476,7 @@
     {
       "skin": "Doctor_Female_Young",
       "file": "characters/Doctor_Female_Young.glb",
-      "sizeBytes": 790640,
+      "sizeBytes": 790676,
       "sourceHash": "ea24c629df92439b8e372f0d9e7d7ddf8cbaafa2d79f5eb2d28d8900a3577da9",
       "slotNames": [
         "Hair",
@@ -490,7 +490,7 @@
     {
       "skin": "Pirate_Male",
       "file": "characters/Pirate_Male.glb",
-      "sizeBytes": 375464,
+      "sizeBytes": 375500,
       "sourceHash": "4a46790aeaa86a919245007932b4cfa7ce744590e538ad0cffe6895fdc48f98c",
       "slotNames": [
         "Skin",
@@ -506,7 +506,7 @@
     {
       "skin": "Pirate_Female",
       "file": "characters/Pirate_Female.glb",
-      "sizeBytes": 881636,
+      "sizeBytes": 881668,
       "sourceHash": "c2309b89eb18a4a4450052761b5201eb2974079160adfdf2a882d9546b1cd385",
       "slotNames": [
         "Skin",
@@ -523,7 +523,7 @@
     {
       "skin": "Ninja_Male",
       "file": "characters/Ninja_Male.glb",
-      "sizeBytes": 393700,
+      "sizeBytes": 393740,
       "sourceHash": "30435b2fe13c954c440b3496cbfb2fa3c55d911f57e4a731c52fe2ad112dfa61",
       "slotNames": [
         "Skin",
@@ -536,7 +536,7 @@
     {
       "skin": "Ninja_Female",
       "file": "characters/Ninja_Female.glb",
-      "sizeBytes": 719396,
+      "sizeBytes": 719432,
       "sourceHash": "ad9f9db7ce49b6110c4ab3db62269c1e920d742aa9d4a6725aa0c1a2f8be1f3a",
       "slotNames": [
         "Skin",
@@ -550,7 +550,7 @@
     {
       "skin": "Wizard",
       "file": "characters/Wizard.glb",
-      "sizeBytes": 673664,
+      "sizeBytes": 673700,
       "sourceHash": "a0515645954945a9029bf2db4b4fa120f24e9516402987bdc29c7b570fb9f957",
       "slotNames": [
         "Skin",
@@ -565,7 +565,7 @@
     {
       "skin": "Viking_Male",
       "file": "characters/Viking_Male.glb",
-      "sizeBytes": 672460,
+      "sizeBytes": 672492,
       "sourceHash": "022d068d0308f485e372398c73c9d8a90a76b1603b3dd36dc09b29572c005db5",
       "slotNames": [
         "Skin",
@@ -579,7 +579,7 @@
     {
       "skin": "Viking_Female",
       "file": "characters/Viking_Female.glb",
-      "sizeBytes": 741308,
+      "sizeBytes": 741340,
       "sourceHash": "e2aef2a4f77e3f2de414e8885dbf049f16332fcb056042ba6132d4ddb0cbffe3",
       "slotNames": [
         "Skin",
@@ -593,7 +593,7 @@
     {
       "skin": "Witch",
       "file": "characters/Witch.glb",
-      "sizeBytes": 709780,
+      "sizeBytes": 709816,
       "sourceHash": "16a04855bec91970c99096cf05f88561c99500650c925ca7b41214604c34aded",
       "slotNames": [
         "Skin",
@@ -608,7 +608,7 @@
     {
       "skin": "Casual_Bald",
       "file": "characters/Casual_Bald.glb",
-      "sizeBytes": 339852,
+      "sizeBytes": 339884,
       "sourceHash": "870cbe9fdf79d0f76fc325757300a9dde96d7d92d69ee205100cb10cd9a4a152",
       "slotNames": [
         "Skin",
@@ -622,7 +622,7 @@
     {
       "skin": "Zombie_Male",
       "file": "characters/Zombie_Male.glb",
-      "sizeBytes": 474428,
+      "sizeBytes": 474424,
       "sourceHash": "15d8dd4ba8d7fec4af26ba11270ed99209417a8fc5896208e9f02f7456a2e751",
       "slotNames": [
         "Skin",
@@ -638,7 +638,7 @@
     {
       "skin": "Zombie_Female",
       "file": "characters/Zombie_Female.glb",
-      "sizeBytes": 886176,
+      "sizeBytes": 886172,
       "sourceHash": "bb810ff5ee2680d02a8b2efe34b2028d324fb3ed2ecfdd3cb04a5d0f23df42e2",
       "slotNames": [
         "Skin",
@@ -654,7 +654,7 @@
     {
       "skin": "Suit_Male",
       "file": "characters/Suit_Male.glb",
-      "sizeBytes": 646296,
+      "sizeBytes": 646328,
       "sourceHash": "436eae89c51666c175ac040c6ee3afadfefc10de939de1d81d423754d5dcccb7",
       "slotNames": [
         "Skin",
@@ -669,7 +669,7 @@
     {
       "skin": "Suit_Female",
       "file": "characters/Suit_Female.glb",
-      "sizeBytes": 670080,
+      "sizeBytes": 670116,
       "sourceHash": "40a18bca5d0fcf93f5be2dce89851fa65683831d3c5279dfef67eee23da4e425",
       "slotNames": [
         "Skin",
@@ -684,7 +684,7 @@
     {
       "skin": "BaseCharacter",
       "file": "characters/BaseCharacter.glb",
-      "sizeBytes": 293484,
+      "sizeBytes": 293520,
       "sourceHash": "959db10766e2d2e218a9e4c8216c16ec300e8bf88bbef34f69bacad1e5f4b702",
       "slotNames": [
         "Skin",
@@ -694,7 +694,7 @@
     {
       "skin": "Cowboy_Male",
       "file": "characters/Cowboy_Male.glb",
-      "sizeBytes": 418496,
+      "sizeBytes": 418532,
       "sourceHash": "14d239cc0debdb4b2be0009c1aeace403c3a4cf0ea8bff94c24a330ac02d0895",
       "slotNames": [
         "Skin",
