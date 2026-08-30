@@ -1,0 +1,4 @@
+{
+  "//": "Source-only workspaces: each package typechecks itself via `pnpm -r typecheck`. No project references, so tsc resolves @virtual-office/* to the same src files vite, esbuild and vitest do.",
+  "files": []
+}

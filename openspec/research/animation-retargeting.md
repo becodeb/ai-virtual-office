@@ -115,16 +115,26 @@ A retarget that leaves pelvis Y constant across all clips is the known failure m
 - **`GLTFExporter` needs a `FileReader` polyfill** in Node (used to drain a `Blob` into an
   `ArrayBuffer`). ~20 lines over `Blob.arrayBuffer()`. `document.createElement('canvas')` is
   only reached for textures, which these models do not have.
-- **Characters carry no textures.** Materials are flat colours on named slots: `Skin`,
-  `Shirt`, `Pants`, `Belt`, `Face`, `Hair`. Recolouring per role is a hex swap, and the
-  exported GLBs stay tiny. Materials load as `MeshPhongMaterial` and should be converted to
+- **Characters carry no textures.** Materials are flat colours on named slots. Recolouring per
+  role is a hex swap, and the exported GLBs stay tiny.
+
+  > **CORRECTION (found during implementation).** An earlier revision of this document claimed
+  > every skin uses the same six slots — `Skin`, `Shirt`, `Pants`, `Belt`, `Face`, `Hair`. That
+  > was measured on `Casual_Male` alone and generalised without checking. Across the 27 curated
+  > skins the palettes vary widely: `Vest`, `Hat`, `Guts`, `Bones`, `DarkClothes`, `Details`
+  > and others appear. `_slot` is therefore written as each mesh's **own** material index, and
+  > the index-to-name table is carried **per skin** in `assets.json` under `slotNames`. The
+  > guarantee in decision 9 is untouched — `_slot` still joins the dedup key exactly, with zero
+  > slot/colour disagreements — only the assumption of a shared global palette was wrong. Materials load as `MeshPhongMaterial` and should be converted to
   `MeshStandardMaterial` (or a toon material) before export.
 - **Kenney office props are already `.glb`** — 140 of them, zero conversion needed.
 
 ## Export pipeline — validated
 
 `GLTFExporter` runs headless once `FileReader` is shimmed over `Blob.arrayBuffer()`
-(~15 lines; it is only used to drain a Blob). A full export/reload round-trip preserves
+(~15 lines; it is only used to drain a Blob). The shim **must** implement `onloadend` — the
+binary GLB path resolves through `onloadend` and never fires `onload`, so a shim providing only
+`onload` hangs silently instead of erroring. A full export/reload round-trip preserves
 clip names, track counts, durations and the measured `Body.position` heights exactly.
 
 **All 84 clips** (both libraries, minus the two `A_TPose` references) retarget cleanly in a

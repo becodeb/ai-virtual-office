@@ -1,0 +1,17 @@
+{
+  "name": "@virtual-office/deployment",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Executable checks over the Docker and Compose delivery contract.",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0",
+    "yaml": "^2.6.0"
+  }
+}

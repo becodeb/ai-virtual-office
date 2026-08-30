@@ -1,0 +1,20 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Opt-in overlay for a manually managed reverse proxy.
+#
+# Use this only when an external `reverse_proxy_network` already exists — the
+# convention used by the sibling repos. Under Coolify you do NOT want this file;
+# Coolify attaches the service to its own proxy network and generates the
+# routing labels itself.
+#
+#   docker network create reverse_proxy_network        # once, if missing
+#   docker compose -f docker-compose.prod.yml -f docker-compose.proxy.yml up -d
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  office:
+    networks:
+      - reverse_proxy_network
+
+networks:
+  reverse_proxy_network:
+    external: true

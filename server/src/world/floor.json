@@ -1,0 +1,886 @@
+{
+  "width": 11,
+  "height": 7,
+  "walls": false,
+  "zones": [
+    {
+      "id": "work",
+      "rect": [
+        0,
+        0,
+        4,
+        2
+      ],
+      "tint": "#a8825e"
+    },
+    {
+      "id": "kitchen",
+      "rect": [
+        6,
+        0,
+        10,
+        2
+      ],
+      "tint": "#bfb6a4"
+    },
+    {
+      "id": "meeting",
+      "rect": [
+        0,
+        4,
+        4,
+        6
+      ],
+      "tint": "#9a7a52"
+    },
+    {
+      "id": "lounge",
+      "rect": [
+        6,
+        4,
+        10,
+        6
+      ],
+      "tint": "#8f6a55"
+    }
+  ],
+  "elevatorCell": [
+    5,
+    6
+  ],
+  "fireExitCell": [
+    5,
+    0
+  ],
+  "kitchen": {
+    "coffeeMachineCell": [
+      6,
+      0
+    ],
+    "standCell": [
+      6,
+      1
+    ],
+    "stoveStandCell": [
+      7,
+      1
+    ]
+  },
+  "meetingRoom": {
+    "screenCell": [
+      0,
+      4
+    ]
+  },
+  "bear": {
+    "cell": [
+      0,
+      6
+    ],
+    "standCell": [
+      1,
+      6
+    ]
+  },
+  "architect": {
+    "cell": [
+      10,
+      6
+    ]
+  },
+  "desks": [
+    {
+      "id": "D1",
+      "cell": [
+        0,
+        0
+      ],
+      "seatCell": [
+        1,
+        0
+      ],
+      "facing": "west",
+      "window": true
+    },
+    {
+      "id": "D2",
+      "cell": [
+        0,
+        1
+      ],
+      "seatCell": [
+        1,
+        1
+      ],
+      "facing": "west",
+      "window": false
+    },
+    {
+      "id": "D3",
+      "cell": [
+        0,
+        2
+      ],
+      "seatCell": [
+        1,
+        2
+      ],
+      "facing": "west",
+      "window": false
+    },
+    {
+      "id": "D4",
+      "cell": [
+        4,
+        0
+      ],
+      "seatCell": [
+        3,
+        0
+      ],
+      "facing": "east",
+      "window": true
+    },
+    {
+      "id": "D5",
+      "cell": [
+        4,
+        1
+      ],
+      "seatCell": [
+        3,
+        1
+      ],
+      "facing": "east",
+      "window": false
+    },
+    {
+      "id": "D6",
+      "cell": [
+        4,
+        2
+      ],
+      "seatCell": [
+        3,
+        2
+      ],
+      "facing": "east",
+      "window": false
+    }
+  ],
+  "lounge": {
+    "seats": [
+      {
+        "cell": [
+          8,
+          4
+        ],
+        "facing": "east"
+      },
+      {
+        "cell": [
+          8,
+          5
+        ],
+        "facing": "east"
+      },
+      {
+        "cell": [
+          8,
+          6
+        ],
+        "facing": "east"
+      }
+    ]
+  },
+  "decor": [
+    {
+      "cell": [
+        7,
+        0
+      ],
+      "prop": "kitchenCabinetDrawer",
+      "facing": "south",
+      "offset": [
+        -0.25,
+        0
+      ]
+    },
+    {
+      "cell": [
+        7,
+        0
+      ],
+      "prop": "kitchenStove",
+      "facing": "south",
+      "offset": [
+        0.25,
+        0
+      ]
+    },
+    {
+      "cell": [
+        7,
+        0
+      ],
+      "prop": "hoodModern",
+      "facing": "south",
+      "offset": [
+        0.25,
+        -0.02
+      ],
+      "y": 0.62
+    },
+    {
+      "cell": [
+        8,
+        0
+      ],
+      "prop": "kitchenSink",
+      "facing": "south",
+      "offset": [
+        -0.25,
+        0
+      ]
+    },
+    {
+      "cell": [
+        8,
+        0
+      ],
+      "prop": "kitchenCabinet",
+      "facing": "south",
+      "offset": [
+        0.25,
+        0
+      ]
+    },
+    {
+      "cell": [
+        8,
+        0
+      ],
+      "prop": "kitchenCabinetUpper",
+      "facing": "south",
+      "offset": [
+        -0.25,
+        -0.02
+      ],
+      "y": 0.62
+    },
+    {
+      "cell": [
+        8,
+        0
+      ],
+      "prop": "toaster",
+      "facing": "south",
+      "offset": [
+        0.25,
+        0
+      ],
+      "y": 0.46
+    },
+    {
+      "cell": [
+        9,
+        0
+      ],
+      "prop": "kitchenCabinet",
+      "facing": "south",
+      "offset": [
+        -0.25,
+        0
+      ]
+    },
+    {
+      "cell": [
+        9,
+        0
+      ],
+      "prop": "kitchenMicrowave",
+      "facing": "south",
+      "offset": [
+        -0.25,
+        0
+      ],
+      "y": 0.46
+    },
+    {
+      "cell": [
+        10,
+        0
+      ],
+      "prop": "kitchenFridge",
+      "facing": "south",
+      "offset": [
+        0,
+        0
+      ]
+    },
+    {
+      "cell": [
+        8,
+        2
+      ],
+      "prop": "kitchenBar",
+      "facing": "north",
+      "offset": [
+        0,
+        0
+      ]
+    },
+    {
+      "cell": [
+        9,
+        2
+      ],
+      "prop": "kitchenBar",
+      "facing": "north",
+      "offset": [
+        0,
+        0
+      ]
+    },
+    {
+      "cell": [
+        10,
+        1
+      ],
+      "prop": "stoolBar",
+      "facing": "west",
+      "offset": [
+        0,
+        0
+      ]
+    },
+    {
+      "cell": [
+        10,
+        2
+      ],
+      "prop": "plantSmall1",
+      "facing": "north",
+      "offset": [
+        0,
+        0
+      ]
+    },
+    {
+      "cell": [
+        10,
+        5
+      ],
+      "prop": "cabinetTelevision",
+      "facing": "west",
+      "offset": [
+        0,
+        0
+      ]
+    },
+    {
+      "cell": [
+        10,
+        5
+      ],
+      "prop": "televisionModern",
+      "facing": "west",
+      "offset": [
+        0,
+        0
+      ],
+      "y": 0.31
+    },
+    {
+      "cell": [
+        9,
+        5
+      ],
+      "prop": "tableCoffeeSquare",
+      "facing": "north",
+      "offset": [
+        0,
+        0
+      ]
+    },
+    {
+      "cell": [
+        10,
+        4
+      ],
+      "prop": "lampRoundFloor",
+      "facing": "west",
+      "offset": [
+        0,
+        0
+      ]
+    },
+    {
+      "cell": [
+        9,
+        6
+      ],
+      "prop": "speaker",
+      "facing": "west",
+      "offset": [
+        0,
+        0
+      ]
+    },
+    {
+      "cell": [
+        7,
+        4
+      ],
+      "prop": "loungeDesignChair",
+      "facing": "east",
+      "offset": [
+        0,
+        0
+      ]
+    },
+    {
+      "cell": [
+        6,
+        6
+      ],
+      "prop": "sideTableDrawers",
+      "facing": "east",
+      "offset": [
+        0,
+        0
+      ]
+    },
+    {
+      "cell": [
+        2,
+        5
+      ],
+      "prop": "tableRound",
+      "facing": "north",
+      "offset": [
+        0,
+        0
+      ]
+    },
+    {
+      "cell": [
+        1,
+        5
+      ],
+      "prop": "chairModernCushion",
+      "facing": "east",
+      "offset": [
+        0,
+        0
+      ]
+    },
+    {
+      "cell": [
+        3,
+        5
+      ],
+      "prop": "chairModernCushion",
+      "facing": "west",
+      "offset": [
+        0,
+        0
+      ]
+    },
+    {
+      "cell": [
+        2,
+        5
+      ],
+      "prop": "chairModernCushion",
+      "facing": "north",
+      "offset": [
+        0,
+        0
+      ]
+    },
+    {
+      "cell": [
+        2,
+        4
+      ],
+      "prop": "benchCushion",
+      "facing": "south",
+      "offset": [
+        0,
+        0
+      ]
+    },
+    {
+      "cell": [
+        0,
+        5
+      ],
+      "prop": "coatRackStanding",
+      "facing": "east",
+      "offset": [
+        0,
+        0
+      ]
+    },
+    {
+      "cell": [
+        4,
+        4
+      ],
+      "prop": "bookcaseOpenLow",
+      "facing": "south",
+      "offset": [
+        0,
+        0
+      ]
+    },
+    {
+      "cell": [
+        4,
+        5
+      ],
+      "prop": "pottedPlant",
+      "facing": "north",
+      "offset": [
+        0,
+        0
+      ]
+    },
+    {
+      "cell": [
+        3,
+        5
+      ],
+      "prop": "plantSmall1",
+      "facing": "north",
+      "offset": [
+        0,
+        0
+      ]
+    },
+    {
+      "cell": [
+        0,
+        0
+      ],
+      "prop": "bookcaseOpenLow",
+      "facing": "south",
+      "offset": [
+        0,
+        0
+      ]
+    },
+    {
+      "cell": [
+        0,
+        2
+      ],
+      "prop": "trashcan",
+      "facing": "north",
+      "offset": [
+        0,
+        0
+      ]
+    },
+    {
+      "cell": [
+        2,
+        1
+      ],
+      "prop": "rugRectangle",
+      "facing": "north",
+      "offset": [
+        0,
+        0
+      ],
+      "flat": true
+    },
+    {
+      "cell": [
+        2,
+        5
+      ],
+      "prop": "rugRounded",
+      "facing": "north",
+      "offset": [
+        0,
+        0
+      ],
+      "flat": true
+    },
+    {
+      "cell": [
+        8,
+        5
+      ],
+      "prop": "rugRounded",
+      "facing": "north",
+      "offset": [
+        0,
+        0
+      ],
+      "flat": true
+    },
+    {
+      "cell": [
+        9,
+        4
+      ],
+      "prop": "rugSquare",
+      "facing": "north",
+      "offset": [
+        0,
+        0
+      ],
+      "flat": true
+    },
+    {
+      "cell": [
+        7,
+        1
+      ],
+      "prop": "rugSquare",
+      "facing": "north",
+      "offset": [
+        0,
+        0
+      ],
+      "flat": true
+    },
+    {
+      "cell": [
+        1,
+        4
+      ],
+      "prop": "rugSquare",
+      "facing": "north",
+      "offset": [
+        0,
+        0
+      ],
+      "flat": true
+    },
+    {
+      "cell": [
+        5,
+        0
+      ],
+      "prop": "rugSquare",
+      "facing": "north",
+      "offset": [
+        0,
+        0
+      ],
+      "flat": true
+    },
+    {
+      "cell": [
+        5,
+        1
+      ],
+      "prop": "rugSquare",
+      "facing": "north",
+      "offset": [
+        0,
+        0
+      ],
+      "flat": true
+    },
+    {
+      "cell": [
+        5,
+        2
+      ],
+      "prop": "rugSquare",
+      "facing": "north",
+      "offset": [
+        0,
+        0
+      ],
+      "flat": true
+    },
+    {
+      "cell": [
+        5,
+        3
+      ],
+      "prop": "rugSquare",
+      "facing": "north",
+      "offset": [
+        0,
+        0
+      ],
+      "flat": true
+    },
+    {
+      "cell": [
+        5,
+        4
+      ],
+      "prop": "rugSquare",
+      "facing": "north",
+      "offset": [
+        0,
+        0
+      ],
+      "flat": true
+    },
+    {
+      "cell": [
+        5,
+        5
+      ],
+      "prop": "rugSquare",
+      "facing": "north",
+      "offset": [
+        0,
+        0
+      ],
+      "flat": true
+    },
+    {
+      "cell": [
+        5,
+        6
+      ],
+      "prop": "rugSquare",
+      "facing": "north",
+      "offset": [
+        0,
+        0
+      ],
+      "flat": true
+    },
+    {
+      "cell": [
+        0,
+        3
+      ],
+      "prop": "rugSquare",
+      "facing": "north",
+      "offset": [
+        0,
+        0
+      ],
+      "flat": true
+    },
+    {
+      "cell": [
+        1,
+        3
+      ],
+      "prop": "rugSquare",
+      "facing": "north",
+      "offset": [
+        0,
+        0
+      ],
+      "flat": true
+    },
+    {
+      "cell": [
+        2,
+        3
+      ],
+      "prop": "rugSquare",
+      "facing": "north",
+      "offset": [
+        0,
+        0
+      ],
+      "flat": true
+    },
+    {
+      "cell": [
+        3,
+        3
+      ],
+      "prop": "rugSquare",
+      "facing": "north",
+      "offset": [
+        0,
+        0
+      ],
+      "flat": true
+    },
+    {
+      "cell": [
+        4,
+        3
+      ],
+      "prop": "rugSquare",
+      "facing": "north",
+      "offset": [
+        0,
+        0
+      ],
+      "flat": true
+    },
+    {
+      "cell": [
+        6,
+        3
+      ],
+      "prop": "rugSquare",
+      "facing": "north",
+      "offset": [
+        0,
+        0
+      ],
+      "flat": true
+    },
+    {
+      "cell": [
+        7,
+        3
+      ],
+      "prop": "rugSquare",
+      "facing": "north",
+      "offset": [
+        0,
+        0
+      ],
+      "flat": true
+    },
+    {
+      "cell": [
+        8,
+        3
+      ],
+      "prop": "rugSquare",
+      "facing": "north",
+      "offset": [
+        0,
+        0
+      ],
+      "flat": true
+    },
+    {
+      "cell": [
+        9,
+        3
+      ],
+      "prop": "rugSquare",
+      "facing": "north",
+      "offset": [
+        0,
+        0
+      ],
+      "flat": true
+    },
+    {
+      "cell": [
+        10,
+        3
+      ],
+      "prop": "rugSquare",
+      "facing": "north",
+      "offset": [
+        0,
+        0
+      ],
+      "flat": true
+    }
+  ]
+}

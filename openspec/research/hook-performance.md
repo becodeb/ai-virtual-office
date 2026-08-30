@@ -42,7 +42,58 @@ Properties this shape gets for free:
 
 ## Fallback
 
-`hooks/office-hook.js` (Node, zero dependencies) ships alongside for machines without `curl`.
+`hooks/office-hook.cjs` (Node, zero dependencies) ships alongside for machines without `curl`.
 The example `.claude/settings.json` wires the shell version by default and documents the swap
 in one line. curl 8.14.1 is present on this host; Windows 10+ ships `curl.exe`, so the fallback
 is genuinely an edge case rather than the common path.
+
+---
+
+## CORRECTION: the naive backgrounded pipe delivers an empty body
+
+The 3 ms figure above was measured against a dead port, which never checked whether the payload
+actually **arrived**. It does not.
+
+```sh
+curl ... --data-binary @- "$URL" &   # <-- WRONG. Sends a request with no body.
+exit 0
+```
+
+Measured against a receiver that counts body bytes: **20 of 20 requests arrived with 0 bytes.**
+The connection opens, the request fires, the hub answers 204. Everything looks healthy. The
+payload is simply gone.
+
+The cause: `sh` exits immediately, closing the inherited stdin pipe before the backgrounded
+`curl` gets to read it. `curl` sees EOF and sends an empty body. This is the worst possible
+failure shape — no error, no non-zero exit, no log line, just a permanently empty office.
+
+### The fix: drain stdin in the foreground, then background the send
+
+```sh
+_b=$(cat)
+printf '%s' "$_b" | curl -s -m 1 -X POST --data-binary @- "$URL" >/dev/null 2>&1 &
+exit 0
+```
+
+Measured: **6 ms per invocation, 30 of 30 delivered, 1581 bytes intact.** Still 7x faster than
+the 44 ms Node implementation. Reading a small JSON object in the foreground is cheap; the
+network call is what gets detached.
+
+### Rejected: passing the body as a curl argument
+
+```sh
+curl ... --data-binary "$_b" ... &   # 5 ms, but leaks the payload
+```
+
+One millisecond faster, and it puts the prompt text into `curl`'s argv where any local process
+can read it from `/proc/<pid>/cmdline`. Rejected. stdin is the only channel that keeps the
+payload out of process metadata.
+
+### Revised numbers
+
+| Implementation | Per call | Body delivered |
+|---|---|---|
+| sh + curl, naive background | 3 ms | **0 bytes — broken** |
+| **sh + curl, drain then background** | **6 ms** | **intact** |
+| sh + curl, body in argv | 5 ms | intact, but leaks via `/proc` |
+| Node fallback | 44 ms | intact |

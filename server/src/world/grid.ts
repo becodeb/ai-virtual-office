@@ -1,0 +1,384 @@
+/**
+ * Grid occupancy and the declarative floor layout, per design.md §4 and the
+ * office-simulation spec's grid-occupancy requirement.
+ *
+ * One grid cell = one world unit (`openspec/research/world-scale.md`). The
+ * grid is built once at boot from `floor.json` and never mutated at runtime
+ * — agent-vs-agent collision is intentionally ignored (design.md Architecture
+ * Decisions), so only static furniture and seats occupy the grid.
+ */
+import rawFloor from './floor.json' with { type: 'json' };
+
+/** Cell is free and walkable. */
+export const CELL_FREE = 0;
+/** Cell is permanently blocked by static furniture (desk body, walls, props). */
+export const CELL_BLOCKED = 1;
+/** Cell is a seat: walkable only as the exact destination of a path (its owner's terminus). */
+export const CELL_SEAT = 2;
+
+export type CellKind = typeof CELL_FREE | typeof CELL_BLOCKED | typeof CELL_SEAT;
+
+export type Cell = readonly [number, number];
+
+/** Measured seat surface of the `chairDesk` prop (vertex-height histogram peak). */
+export const CHAIR_SEAT_SURFACE = 0.31;
+
+/**
+ * Where the seated animation puts the pelvis, as a fraction of standing height.
+ * Measured from the retargeted `Sitting_Idle_Loop`: 0.180 on a 1.05-unit
+ * character.
+ */
+export const SEATED_PELVIS_FRACTION = 0.171;
+
+/** Character standing height, per `world-scale.md`. */
+export const STANDING_HEIGHT = 0.85;
+
+/**
+ * Y for a seated character's ORIGIN — not its hips.
+ *
+ * The sitting clip already lifts the pelvis off the character's own origin, so
+ * placing the origin at the chair's seat surface adds the two together and the
+ * character hovers a whole hip-height above the chair. Subtracting the clip's
+ * own contribution lands the pelvis exactly on the seat.
+ */
+export const CHAIR_SEAT_HEIGHT = CHAIR_SEAT_SURFACE - SEATED_PELVIS_FRACTION * STANDING_HEIGHT;
+/** Desk surface height, per `world-scale.md`. */
+export const DESK_SURFACE_HEIGHT = 0.38;
+/**
+ * A seat's exact transform. `facingRad` is measured with 0 = facing +z
+ * (south, increasing row index) and PI = facing -z (north, decreasing row
+ * index), matching the grid's row-major (x, y) convention below.
+ */
+export interface SeatSocket {
+  /** The seat's own grid cell (type `CELL_SEAT`). */
+  cell: Cell;
+  /** A* pathfinding target — identical to `cell` in this layout. */
+  standCell: Cell;
+  position: { x: number; y: number; z: number };
+  facingRad: number;
+}
+
+export interface DeskLayout {
+  id: string;
+  /** The desk furniture's own cell (type `CELL_BLOCKED`). */
+  cell: Cell;
+  seat: SeatSocket;
+  /** Desks flagged `window: true` are reserved for promoted identities (P1). */
+  window: boolean;
+}
+
+export interface FloorLayout {
+  width: number;
+  height: number;
+  /** Whether a perimeter wall encloses the floor. When false the outer ring is ordinary, usable floor. */
+  walls: boolean;
+  elevatorCell: Cell;
+  fireExitCell: Cell;
+  kitchenCoffeeMachineCell: Cell;
+  /** A free cell next to the coffee machine — the actual A* pathing target (the machine's own cell is blocked). */
+  kitchenStandCell: Cell;
+  /** Where a character stands to cook. Falls back to the coffee spot on a floor plan without a stove. */
+  stoveStandCell: Cell;
+  meetingRoomScreenCell: Cell;
+  /** The teddy bear's own cell (P1 teddy-bear debugging), blocked like any other prop. */
+  bearCell: Cell;
+  /** A free cell next to the bear — the actual A* pathing target. */
+  bearStandCell: Cell;
+  /** The Architect NPC's permanent corner-office cell (P1), blocked like any other static fixture. */
+  architectCell: Cell;
+  desks: DeskLayout[];
+  loungeSeats: SeatSocket[];
+  /**
+   * Cosmetic furniture — plants, bookcases, a coffee table, a bin. It exists
+   * so the room reads as an office rather than a warehouse with twelve tables
+   * in it, and it blocks its cell so characters walk around it rather than
+   * through it.
+   */
+  zones: Array<{ id: string; rect: readonly [number, number, number, number]; tint: string }>;
+  decor: Array<{
+    cell: Cell;
+    prop: string;
+    facingRad: number;
+    offset: readonly [number, number];
+    flat: boolean;
+    y: number;
+  }>;
+}
+
+type RawFacing = 'north' | 'south' | 'east' | 'west';
+
+interface RawDesk {
+  id: string;
+  cell: [number, number];
+  seatCell: [number, number];
+  facing: RawFacing;
+  window?: boolean;
+}
+
+interface RawSeat {
+  cell: [number, number];
+  facing: RawFacing;
+}
+
+interface RawFloor {
+  width: number;
+  height: number;
+  elevatorCell: [number, number];
+  fireExitCell: [number, number];
+  kitchen: { coffeeMachineCell: [number, number]; standCell: [number, number]; stoveStandCell?: [number, number] };
+  meetingRoom: { screenCell: [number, number] };
+  bear: { cell: [number, number]; standCell: [number, number] };
+  architect: { cell: [number, number] };
+  /** Whether the floor is enclosed by perimeter walls. Off: in an isometric view the two near walls hide exactly the desks you want to watch. */
+  walls?: boolean;
+  /** Named areas, each with its own floor colour. */
+  zones?: RawZone[];
+  desks: RawDesk[];
+  lounge: { seats: RawSeat[] };
+  decor?: RawDecor[];
+}
+
+/**
+ * A purely cosmetic prop. Nothing routes to it, and by default it blocks its
+ * cell like any other furniture.
+ *
+ * `offset` places it inside the cell rather than dead centre, which is what
+ * makes a continuous kitchen counter possible: the kit's units are 0.43 wide,
+ * so two of them sit side by side in one 1.0 cell.
+ *
+ * `flat` marks something you walk over — rugs are 0.01 tall and exist to give
+ * a zone an edge, not to be an obstacle.
+ */
+/**
+ * A named area of the floor.
+ *
+ * Its `tint` is what makes a room read as a room from above. Low dividers give
+ * a space edges, but it is the change in floor colour underfoot that says "this
+ * is the kitchen and that is the lounge" at a glance — the strongest signal
+ * available to a camera that looks straight down at a diorama.
+ */
+interface RawZone {
+  id: string;
+  /** Inclusive cell bounds: `[x0, y0, x1, y1]`. */
+  rect: [number, number, number, number];
+  tint: string;
+}
+
+interface RawDecor {
+  cell: [number, number];
+  prop: string;
+  facing?: RawFacing;
+  offset?: [number, number];
+  flat?: boolean;
+  /** Height above the floor, for things that sit on top of other things (a TV on its cabinet). */
+  y?: number;
+}
+
+/**
+ * Rotation about Y, where the forward vector (0,0,1) rotates to
+ * (sin t, 0, cos t): 0 faces +z (south), PI faces -z (north), PI/2 faces +x
+ * (east) and -PI/2 faces -x (west).
+ *
+ * All four cases are handled explicitly. An earlier version returned PI for
+ * anything that was not 'south', which silently pointed every east- and
+ * west-facing seat north — a whole desk bank sitting with its back to its own
+ * desk, with nothing in any log to say so.
+ */
+function facingToRad(facing: RawFacing): number {
+  switch (facing) {
+    case 'south':
+      return 0;
+    case 'north':
+      return Math.PI;
+    case 'east':
+      return Math.PI / 2;
+    case 'west':
+      return -Math.PI / 2;
+  }
+}
+
+/**
+ * How far a desk chair sits from the centre of its own grid cell, toward the
+ * desk it faces.
+ *
+ * A seat cell is one full unit from its desk cell. Drawing the chair at the
+ * cell centre leaves a desk (0.39 deep) and a chair (0.31 deep) with 0.65 units
+ * of empty floor between them, which reads as furniture that has been pushed
+ * apart rather than an office. The logical cell stays put for pathfinding and
+ * occupancy; only the rendered socket moves.
+ */
+export const SEAT_DESK_OFFSET = 0.45;
+
+function seatSocketFromCell(cell: [number, number], facing: RawFacing, pullToward = 0): SeatSocket {
+  const rad = facingToRad(facing);
+  return {
+    cell,
+    standCell: cell,
+    position: {
+      x: cell[0] + 0.5 + Math.sin(rad) * pullToward,
+      y: CHAIR_SEAT_HEIGHT,
+      z: cell[1] + 0.5 + Math.cos(rad) * pullToward,
+    },
+    facingRad: rad,
+  };
+}
+
+/** Parses the raw `floor.json` into the typed {@link FloorLayout}. Pure — no I/O beyond the static import. */
+export function parseFloorLayout(raw: RawFloor): FloorLayout {
+  return {
+    width: raw.width,
+    height: raw.height,
+    walls: raw.walls ?? true,
+    elevatorCell: raw.elevatorCell,
+    fireExitCell: raw.fireExitCell,
+    kitchenCoffeeMachineCell: raw.kitchen.coffeeMachineCell,
+    kitchenStandCell: raw.kitchen.standCell,
+    stoveStandCell: raw.kitchen.stoveStandCell ?? raw.kitchen.standCell,
+    meetingRoomScreenCell: raw.meetingRoom.screenCell,
+    bearCell: raw.bear.cell,
+    bearStandCell: raw.bear.standCell,
+    architectCell: raw.architect.cell,
+    desks: raw.desks.map((d) => ({
+      id: d.id,
+      cell: d.cell,
+      // Desk chairs pull toward their desk; lounge sofas sit at their cell centre.
+      seat: seatSocketFromCell(d.seatCell, d.facing, SEAT_DESK_OFFSET),
+      window: d.window ?? false,
+    })),
+    loungeSeats: raw.lounge.seats.map((s) => seatSocketFromCell(s.cell, s.facing)),
+    zones: (raw.zones ?? []).map((z) => ({ id: z.id, rect: z.rect, tint: z.tint })),
+    decor: (raw.decor ?? []).map((d) => ({
+      cell: d.cell,
+      prop: d.prop,
+      facingRad: d.facing === undefined ? 0 : facingToRad(d.facing),
+      offset: d.offset ?? [0, 0],
+      flat: d.flat ?? false,
+      y: d.y ?? 0,
+    })),
+  };
+}
+
+/** The default floor layout, loaded once from `floor.json`. */
+export const DEFAULT_FLOOR_LAYOUT: FloorLayout = parseFloorLayout(rawFloor as RawFloor);
+
+function cellsEqual(a: Cell, b: Cell): boolean {
+  return a[0] === b[0] && a[1] === b[1];
+}
+
+/**
+ * Static occupancy grid built once from a {@link FloorLayout}. Perimeter
+ * walls are derived (blocked border cells, with openings at the elevator and
+ * fire exit), plus desk bodies, the coffee machine, and the meeting screen
+ * are blocked; every seat cell (desk seats and lounge seats) is type
+ * `CELL_SEAT`.
+ */
+export class Grid {
+  readonly width: number;
+  readonly height: number;
+  private readonly cells: Uint8Array;
+
+  private constructor(width: number, height: number, cells: Uint8Array, readonly layout: FloorLayout | null) {
+    this.width = width;
+    this.height = height;
+    this.cells = cells;
+  }
+
+  /** Builds the occupancy grid from a declarative {@link FloorLayout} (the production path). */
+  static fromLayout(layout: FloorLayout): Grid {
+    const cells = new Uint8Array(layout.width * layout.height).fill(CELL_FREE);
+    const grid = new Grid(layout.width, layout.height, cells, layout);
+
+    // Perimeter walls, with openings at the elevator and fire exit.
+    //
+    // Only when the floor actually HAS walls. This used to run unconditionally,
+    // which left an invisible barrier around a floor that no longer draws any:
+    // the whole outer ring was unwalkable, so nothing could be placed there and
+    // every plan carried a dead margin of bare floor it could not use.
+    if (layout.walls) {
+      for (let x = 0; x < grid.width; x++) {
+        grid.blockUnlessOpening(x, 0, layout);
+        grid.blockUnlessOpening(x, grid.height - 1, layout);
+      }
+      for (let y = 0; y < grid.height; y++) {
+        grid.blockUnlessOpening(0, y, layout);
+        grid.blockUnlessOpening(grid.width - 1, y, layout);
+      }
+    }
+
+    for (const desk of layout.desks) {
+      grid.set(desk.cell[0], desk.cell[1], CELL_BLOCKED);
+      grid.set(desk.seat.cell[0], desk.seat.cell[1], CELL_SEAT);
+    }
+    for (const seat of layout.loungeSeats) {
+      grid.set(seat.cell[0], seat.cell[1], CELL_SEAT);
+    }
+    grid.set(layout.kitchenCoffeeMachineCell[0], layout.kitchenCoffeeMachineCell[1], CELL_BLOCKED);
+    grid.set(layout.meetingRoomScreenCell[0], layout.meetingRoomScreenCell[1], CELL_BLOCKED);
+    grid.set(layout.bearCell[0], layout.bearCell[1], CELL_BLOCKED);
+    grid.set(layout.architectCell[0], layout.architectCell[1], CELL_BLOCKED);
+    for (const item of layout.decor) {
+      // Rugs and doormats are walked over, not around.
+      if (item.flat) continue;
+      grid.set(item.cell[0], item.cell[1], CELL_BLOCKED);
+    }
+    return grid;
+  }
+
+  /**
+   * Builds a bare grid directly from a row-major pattern of cell kinds — no
+   * derived walls, desks, or seats. Used by unit tests that need hand-crafted
+   * occupancy without floor-layout semantics.
+   */
+  static fromPattern(rows: readonly (readonly CellKind[])[]): Grid {
+    const height = rows.length;
+    const width = height > 0 ? rows[0]!.length : 0;
+    const cells = new Uint8Array(width * height);
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        cells[y * width + x] = rows[y]![x]!;
+      }
+    }
+    return new Grid(width, height, cells, null);
+  }
+
+  private blockUnlessOpening(x: number, y: number, layout: FloorLayout): void {
+    const cell: Cell = [x, y];
+    if (cellsEqual(cell, layout.elevatorCell) || cellsEqual(cell, layout.fireExitCell)) {
+      return;
+    }
+    this.set(x, y, CELL_BLOCKED);
+  }
+
+  inBounds(x: number, y: number): boolean {
+    return x >= 0 && y >= 0 && x < this.width && y < this.height;
+  }
+
+  /** Row-major cell index: `y * width + x`. Used for deterministic A* tie-breaks. */
+  index(x: number, y: number): number {
+    return y * this.width + x;
+  }
+
+  get(x: number, y: number): CellKind {
+    return this.cells[this.index(x, y)] as CellKind;
+  }
+
+  private set(x: number, y: number, kind: CellKind): void {
+    this.cells[this.index(x, y)] = kind;
+  }
+
+  /**
+   * Whether `(x, y)` may be entered while pathing toward `goal`. Free cells
+   * are always walkable; a seat cell is walkable only when it is the exact
+   * goal (its owner's terminus); blocked cells are never walkable.
+   */
+  isWalkableToward(x: number, y: number, goal: Cell): boolean {
+    if (!this.inBounds(x, y)) return false;
+    const kind = this.get(x, y);
+    if (kind === CELL_FREE) return true;
+    if (kind === CELL_SEAT) return x === goal[0] && y === goal[1];
+    return false;
+  }
+}
+
+/** The office grid, built once at boot from {@link DEFAULT_FLOOR_LAYOUT}. */
+export const DEFAULT_GRID: Grid = Grid.fromLayout(DEFAULT_FLOOR_LAYOUT);
